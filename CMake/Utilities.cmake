@@ -130,10 +130,10 @@ endfunction()
 		- target: The name of the target
 ]]
 function(install_sample_target target)
-	set(install_dirs "src")
+	set(data_dirs "")
 	foreach(dir IN ITEMS "data" "lua")
 		if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${dir}")
-			list(APPEND install_dirs "${dir}")
+			list(APPEND data_dirs "${dir}")
 		endif()
 	endforeach()
 	file(RELATIVE_PATH sample_path ${PROJECT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
@@ -141,9 +141,41 @@ function(install_sample_target target)
 		${RMLUI_RUNTIME_DEPENDENCY_SET_ARG}
 		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	)
+	set(install_dirs "src" ${data_dirs})
 	install(DIRECTORY ${install_dirs}
 		DESTINATION "${CMAKE_INSTALL_DATADIR}/${sample_path}"
 	)
+
+	# Set Emscripten-specific sample properties and assets.
+	if(EMSCRIPTEN)
+		# Make Emscripten generate the default HTML shell for the sample.
+		set_property(TARGET ${target} PROPERTY SUFFIX ".html")
+
+		# Enables Asyncify which we only need since the backend doesn't control the main loop. This enables us to yield
+		# to the browser during the backend call to Backend::ProcessEvents(). Asyncify results in larger and slower
+		# code, users are instead encouraged to use 'emscripten_set_main_loop()' and family.
+		target_link_libraries(${target} PRIVATE "-sASYNCIFY")
+
+		# We don't know the needed memory beforehand, allow it to grow.
+		target_link_libraries(${target} PRIVATE "-sALLOW_MEMORY_GROWTH")
+
+		# Add common assets.
+		set(common_assets_dir "Samples/assets")
+		target_link_libraries(${target} PRIVATE "--preload-file ${PROJECT_SOURCE_DIR}/${common_assets_dir}/@/${common_assets_dir}/")
+		file(GLOB asset_files "${PROJECT_SOURCE_DIR}/${common_assets_dir}/*")
+
+		# Add sample-specific assets.
+		foreach(source_relative_dir IN LISTS data_dirs)
+			set(abs_dir "${CMAKE_CURRENT_SOURCE_DIR}/${source_relative_dir}")
+			file(RELATIVE_PATH root_relative_dir "${PROJECT_SOURCE_DIR}" "${abs_dir}")
+			target_link_libraries(${target} PRIVATE "--preload-file ${abs_dir}/@/${root_relative_dir}/")
+			file(GLOB sample_data_files "${abs_dir}/*")
+			list(APPEND asset_files "${sample_data_files}")
+		endforeach()
+
+		# Add a linker dependency to all asset files, so that the linker runs again if any asset is modified.
+		set_target_properties(${target} PROPERTIES LINK_DEPENDS "${asset_files}")
+	endif()
 endfunction()
 
 #[[

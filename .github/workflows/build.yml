@@ -166,8 +166,8 @@ jobs:
     - name: Configure CMake
       run: |-
         source emsdk-master/emsdk_env.sh
-        emcmake cmake -B Build --preset samples -Wdev -Werror=dev -DCMAKE_BUILD_TYPE=Debug \
-        -DBUILD_SHARED_LIBS=OFF -DRMLUI_WARNINGS_AS_ERRORS=ON -DRMLUI_EMSCRIPTEN_EXE_FLAGS="-O1" \
+        emcmake cmake -B Build --preset samples -Wdev -Werror=dev -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=OFF -DRMLUI_WARNINGS_AS_ERRORS=ON \
         -DCMAKE_MODULE_PATH=$GITHUB_WORKSPACE/CMake/Modules/Emscripten
 
     - name: Build

@@ -23,6 +23,9 @@ if(NOT TARGET OpenGL::GL)
 	if(NOT DEFINED OpenGL_FIND_VERSION)
 		set(OpenGL_FIND_VERSION "3")
 	endif()
+	if(NOT DEFINED OpenGL_ENABLE_EMULATION)
+		set(OpenGL_ENABLE_EMULATION ON)
+	endif()
 
 	# Check if requested OpenGL version is valid
 	if((OpenGL_FIND_VERSION VERSION_LESS "1") OR (OpenGL_FIND_VERSION VERSION_GREATER_EQUAL "4"))

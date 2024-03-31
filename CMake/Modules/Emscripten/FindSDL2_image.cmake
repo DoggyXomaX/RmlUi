@@ -2,7 +2,8 @@
 	Custom find module for SDL_image for Emscripten compilation.
 
 	Input variables:
-		none
+		SDL2_image_FORMATS
+
 	Output variables:
 		SDL2_image_FOUND
 		SDL2_image_VERSION
@@ -22,13 +23,16 @@ if(NOT TARGET SDL2_image::SDL2_image)
 	if(NOT DEFINED SDL2_image_FIND_VERSION)
 		set(SDL2_image_FIND_VERSION "2")
 	endif()
+	if(NOT DEFINED SDL2_image_FORMATS)
+		set(SDL2_image_FORMATS "[tga]")
+	endif()
 
 	# Check if requested SDL version is valid
 	if((SDL2_image_FIND_VERSION VERSION_LESS "2") OR (SDL2_image_FIND_VERSION VERSION_GREATER_EQUAL "3"))
 		message(FATAL_ERROR "The requested SDL2_image version ${SDL2_image_FIND_VERSION} is invalid.")
 	endif()
 
-	message(WARNING
+	message(NOTICE
 		"SDL_image with Emscripten can only be used if SDL usage is also enabled. "
 		"The version number of both libraries must match as well."
 	)
@@ -44,9 +48,15 @@ if(NOT TARGET SDL2_image::SDL2_image)
 	# Version number to pass to compiler
 	set(SDL2_image_EMSCRIPTEN_COMPILER_SELECTED_VERSION "2")
 
+	set(SDL2_image_TARGET_ARGS "-sUSE_SDL_IMAGE=${SDL2_image_EMSCRIPTEN_COMPILER_SELECTED_VERSION}")
+
+	if(SDL2_image_FORMATS)
+		list(APPEND SDL2_image_TARGET_ARGS "-sSDL2_IMAGE_FORMATS=${SDL2_image_FORMATS}")
+	endif()
+
 	# Enable compilation and linking against SDL
-	target_compile_options(SDL2_image::SDL2_image INTERFACE "-sUSE_SDL_IMAGE=${SDL2_image_EMSCRIPTEN_COMPILER_SELECTED_VERSION}")
-	target_link_libraries(SDL2_image::SDL2_image INTERFACE "-sUSE_SDL_IMAGE=${SDL2_image_EMSCRIPTEN_COMPILER_SELECTED_VERSION}")
+	target_compile_options(SDL2_image::SDL2_image INTERFACE "${SDL2_image_TARGET_ARGS}")
+	target_link_libraries(SDL2_image::SDL2_image INTERFACE "${SDL2_image_TARGET_ARGS}")
 
 	# Get final compiler and linker flags to print them
 	get_target_property(SDL2_image_COMPILE_FLAGS SDL2_image::SDL2_image "INTERFACE_COMPILE_OPTIONS")
@@ -59,8 +69,9 @@ if(NOT TARGET SDL2_image::SDL2_image)
 	)
 
 	# Clean scope
+	unset(SDL2_image_TARGET_ARGS)
 	unset(SDL2_image_COMPILE_FLAGS)
-	unset(SDL2_image_COMPILE_FLAGS)
+	unset(SDL2_image_LINK_FLAGS)
 	unset(SDL2_image_EMSCRIPTEN_COMPILER_SELECTED_VERSION)
 else()
 	# Since the target already exists, we declare it as found
