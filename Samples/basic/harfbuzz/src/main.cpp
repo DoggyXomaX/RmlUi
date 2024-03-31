@@ -37,7 +37,7 @@
 */
 
 // Toggle this variable to enable/disable text shaping.
-constexpr bool EnableTextShaping = false;
+constexpr bool EnableTextShaping = true;
 
 class HarfBuzzEventListener : public Rml::EventListener {
 public:
@@ -134,8 +134,8 @@ int main(int /*argc*/, char** /*argv*/)
 	// Load required fonts.
 	Rml::String font_paths[3] = {
 		"assets/LatoLatin-Regular.ttf",
-		"basic/harfbuzzshaping/data/Cairo-Regular.ttf",
-		"basic/harfbuzzshaping/data/Poppins-Regular.ttf",
+		"basic/harfbuzz/data/Cairo-Regular.ttf",
+		"basic/harfbuzz/data/Poppins-Regular.ttf",
 	};
 	for (const Rml::String& font_path : font_paths)
 		if (!Rml::LoadFontFace(font_path))
@@ -147,7 +147,7 @@ int main(int /*argc*/, char** /*argv*/)
 		}
 
 	// Load and show the demo document.
-	if (Rml::ElementDocument* document = context->LoadDocument("basic/harfbuzzshaping/data/harfbuzzshaping.rml"))
+	if (Rml::ElementDocument* document = context->LoadDocument("basic/harfbuzz/data/harfbuzz.rml"))
 	{
 		if (auto el = document->GetElementById("title"))
 			el->SetInnerRML("HarfBuzz Text Shaping");

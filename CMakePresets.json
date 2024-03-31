@@ -11,6 +11,7 @@
 			"name": "samples-all",
 			"inherits": "samples",
 			"cacheVariables": {
+				"RMLUI_HARFBUZZ_SAMPLE": true,
 				"RMLUI_LOTTIE_PLUGIN": true,
 				"RMLUI_SVG_PLUGIN": true,
 				"RMLUI_LUA_BINDINGS": true
@@ -43,6 +44,7 @@
 			"name": "dev-all",
 			"inherits": "dev",
 			"cacheVariables": {
+				"RMLUI_HARFBUZZ_SAMPLE": true,
 				"RMLUI_LOTTIE_PLUGIN": true,
 				"RMLUI_SVG_PLUGIN": true,
 				"RMLUI_LUA_BINDINGS": true

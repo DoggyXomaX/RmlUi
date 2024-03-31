@@ -63,6 +63,15 @@ if(NOT RMLUI_IS_CONFIG_FILE)
 	endif()
 endif()
 
+if(RMLUI_HARFBUZZ_SAMPLE)
+	if(NOT RMLUI_FONT_ENGINE STREQUAL "freetype")
+		message(FATAL_ERROR "The HarfBuzz sample requires the default (FreeType) font engine to be enabled. Please set RMLUI_FONT_ENGINE accordingly or disable RMLUI_HARFBUZZ_SAMPLE.")
+	endif()
+
+	find_package("HarfBuzz")
+	report_dependency_found_or_error("HarfBuzz" harfbuzz::harfbuzz "HarfBuzz library available for samples")
+endif()
+
 if(RMLUI_TRACY_PROFILING)
 	find_package(Tracy CONFIG QUIET)
 
