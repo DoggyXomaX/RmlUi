@@ -4,10 +4,6 @@ set(TARGET_NAME "${RMLUI_SAMPLE_PREFIX}${SAMPLE_NAME}")
 add_executable(${TARGET_NAME} WIN32
 	src/DecoratorDefender.cpp
 	src/DecoratorDefender.h
-	src/DecoratorInstancerDefender.cpp
-	src/DecoratorInstancerDefender.h
-	src/DecoratorInstancerStarfield.cpp
-	src/DecoratorInstancerStarfield.h
 	src/DecoratorStarfield.cpp
 	src/DecoratorStarfield.h
 	src/Defender.cpp

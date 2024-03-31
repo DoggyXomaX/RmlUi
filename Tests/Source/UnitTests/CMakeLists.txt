@@ -12,8 +12,9 @@ add_executable(${TARGET_NAME}
 	ElementFormControlSelect.cpp
 	ElementImage.cpp
 	ElementStyle.cpp
-	GeometryDatabase.cpp
+	Filter.cpp
 	Layout.cpp
+	Localization.cpp
 	main.cpp
 	Math.cpp
 	MediaQuery.cpp
@@ -22,7 +23,9 @@ add_executable(${TARGET_NAME}
 	Selectors.cpp
 	Specificity_Basic.cpp
 	Specificity_MediaQuery.cpp
+	StableVector.cpp
 	StringUtilities.cpp
+	StyleSheetParser.cpp
 	Template.cpp
 	URL.cpp
 	Variant.cpp

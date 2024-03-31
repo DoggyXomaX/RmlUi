@@ -4,8 +4,10 @@
 add_library(rmlui_core
 	BaseXMLParser.cpp
 	Box.cpp
+	CallbackTexture.cpp
 	Clock.cpp
 	Clock.h
+	CompiledFilterShader.cpp
 	ComputedValues.cpp
 	ComputeProperty.cpp
 	ComputeProperty.h
@@ -16,9 +18,9 @@ add_library(rmlui_core
 	ConvolutionFilter.cpp
 	Core.cpp
 	DataController.cpp
+	DataController.h
 	DataControllerDefault.cpp
 	DataControllerDefault.h
-	DataController.h
 	DataExpression.cpp
 	DataExpression.h
 	DataModel.cpp
@@ -27,47 +29,39 @@ add_library(rmlui_core
 	DataTypeRegister.cpp
 	DataVariable.cpp
 	DataView.cpp
+	DataView.h
 	DataViewDefault.cpp
 	DataViewDefault.h
-	DataView.h
 	Decorator.cpp
 	DecoratorGradient.cpp
 	DecoratorGradient.h
-	DecoratorInstancer.cpp
 	DecoratorNinePatch.cpp
 	DecoratorNinePatch.h
-	DecoratorTiledBox.cpp
-	DecoratorTiledBox.h
-	DecoratorTiledBoxInstancer.cpp
-	DecoratorTiledBoxInstancer.h
+	DecoratorShader.cpp
+	DecoratorShader.h
 	DecoratorTiled.cpp
 	DecoratorTiled.h
+	DecoratorTiledBox.cpp
+	DecoratorTiledBox.h
 	DecoratorTiledHorizontal.cpp
 	DecoratorTiledHorizontal.h
-	DecoratorTiledHorizontalInstancer.cpp
-	DecoratorTiledHorizontalInstancer.h
 	DecoratorTiledImage.cpp
 	DecoratorTiledImage.h
-	DecoratorTiledImageInstancer.cpp
-	DecoratorTiledImageInstancer.h
-	DecoratorTiledInstancer.cpp
-	DecoratorTiledInstancer.h
 	DecoratorTiledVertical.cpp
 	DecoratorTiledVertical.h
-	DecoratorTiledVerticalInstancer.cpp
-	DecoratorTiledVerticalInstancer.h
 	DocumentHeader.cpp
 	DocumentHeader.h
+	EffectSpecification.cpp
+	Element.cpp
 	ElementAnimation.cpp
 	ElementAnimation.h
 	ElementBackgroundBorder.cpp
 	ElementBackgroundBorder.h
-	Element.cpp
-	ElementDecoration.cpp
-	ElementDecoration.h
 	ElementDefinition.cpp
 	ElementDefinition.h
 	ElementDocument.cpp
+	ElementEffects.cpp
+	ElementEffects.h
 	ElementHandle.cpp
 	ElementHandle.h
 	ElementInstancer.cpp
@@ -89,9 +83,16 @@ add_library(rmlui_core
 	FileInterface.cpp
 	FileInterfaceDefault.cpp
 	FileInterfaceDefault.h
+	Filter.cpp
+	FilterBasic.cpp
+	FilterBasic.h
+	FilterBlur.cpp
+	FilterBlur.h
+	FilterDropShadow.cpp
+	FilterDropShadow.h
+	FontEffect.cpp
 	FontEffectBlur.cpp
 	FontEffectBlur.h
-	FontEffect.cpp
 	FontEffectGlow.cpp
 	FontEffectGlow.h
 	FontEffectInstancer.cpp
@@ -100,17 +101,19 @@ add_library(rmlui_core
 	FontEffectShadow.cpp
 	FontEffectShadow.h
 	FontEngineInterface.cpp
+	Geometry.cpp
 	GeometryBackgroundBorder.cpp
 	GeometryBackgroundBorder.h
-	Geometry.cpp
-	GeometryDatabase.cpp
-	GeometryDatabase.h
-	GeometryUtilities.cpp
+	GeometryBoxShadow.cpp
+	GeometryBoxShadow.h
 	IdNameMap.h
 	Log.cpp
+	LogDefault.cpp
+	LogDefault.h
 	Math.cpp
 	Memory.cpp
 	Memory.h
+	MeshUtilities.cpp
 	ObserverPtr.cpp
 	Plugin.cpp
 	PluginRegistry.cpp
@@ -125,10 +128,16 @@ add_library(rmlui_core
 	PropertyDictionary.cpp
 	PropertyParserAnimation.cpp
 	PropertyParserAnimation.h
+	PropertyParserBoxShadow.cpp
+	PropertyParserBoxShadow.h
+	PropertyParserColorStopList.cpp
+	PropertyParserColorStopList.h
 	PropertyParserColour.cpp
 	PropertyParserColour.h
 	PropertyParserDecorator.cpp
 	PropertyParserDecorator.h
+	PropertyParserFilter.cpp
+	PropertyParserFilter.h
 	PropertyParserFontEffect.cpp
 	PropertyParserFontEffect.h
 	PropertyParserKeyword.cpp
@@ -144,6 +153,10 @@ add_library(rmlui_core
 	PropertyShorthandDefinition.h
 	PropertySpecification.cpp
 	RenderInterface.cpp
+	RenderInterfaceCompatibility.cpp
+	RenderManager.cpp
+	RenderManagerAccess.cpp
+	RenderManagerAccess.h
 	ScrollController.cpp
 	ScrollController.h
 	Spritesheet.cpp
@@ -152,8 +165,8 @@ add_library(rmlui_core
 	StreamFile.h
 	StreamMemory.cpp
 	StringUtilities.cpp
-	StyleSheetContainer.cpp
 	StyleSheet.cpp
+	StyleSheetContainer.cpp
 	StyleSheetFactory.cpp
 	StyleSheetFactory.h
 	StyleSheetNode.cpp
@@ -164,10 +177,10 @@ add_library(rmlui_core
 	StyleSheetSelector.h
 	StyleSheetSpecification.cpp
 	SystemInterface.cpp
-	TemplateCache.cpp
-	TemplateCache.h
 	Template.cpp
 	Template.h
+	TemplateCache.cpp
+	TemplateCache.h
 	Texture.cpp
 	TextureDatabase.cpp
 	TextureDatabase.h
@@ -179,8 +192,6 @@ add_library(rmlui_core
 	TextureLayoutRow.h
 	TextureLayoutTexture.cpp
 	TextureLayoutTexture.h
-	TextureResource.cpp
-	TextureResource.h
 	Transform.cpp
 	TransformPrimitive.cpp
 	TransformState.cpp
@@ -193,9 +204,9 @@ add_library(rmlui_core
 	Variant.cpp
 	WidgetScroll.cpp
 	WidgetScroll.h
+	XMLNodeHandler.cpp
 	XMLNodeHandlerBody.cpp
 	XMLNodeHandlerBody.h
-	XMLNodeHandler.cpp
 	XMLNodeHandlerDefault.cpp
 	XMLNodeHandlerDefault.h
 	XMLNodeHandlerHead.cpp
@@ -212,10 +223,13 @@ add_library(rmlui_core
 # the entire include directory has already been declared as public
 target_sources(rmlui_core PRIVATE
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Config/Config.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/BaseXMLParser.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Box.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/CallbackTexture.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Colour.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Colour.inl"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/CompiledFilterShader.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ComputedValues.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Containers/itlib/flat_map.hpp"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Containers/itlib/flat_set.hpp"
@@ -231,18 +245,46 @@ target_sources(rmlui_core PRIVATE
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/DataTypes.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/DataVariable.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Debug.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/DecorationTypes.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Decorator.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/DecoratorInstancer.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Dictionary.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/EffectSpecification.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Element.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Element.inl"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ElementDocument.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ElementInstancer.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ElementScroll.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementForm.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementFormControl.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementFormControlInput.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementFormControlSelect.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementFormControlTextArea.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementProgress.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementTabSet.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ElementText.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ElementUtilities.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Event.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/EventInstancer.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/EventListener.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/EventListenerInstancer.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Factory.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FileInterface.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Filter.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontEffect.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontEffectInstancer.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontEngineInterface.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontGlyph.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontMetrics.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Geometry.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Header.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ID.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Input.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Log.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Math.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Matrix4.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Matrix4.inl"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Mesh.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/MeshUtilities.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/NumericValue.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ObserverPtr.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Platform.h"
@@ -256,26 +298,14 @@ target_sources(rmlui_core PRIVATE
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/PropertyParser.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/PropertySpecification.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Rectangle.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ElementScroll.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ElementText.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ElementUtilities.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Event.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/EventInstancer.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/EventListener.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/EventListenerInstancer.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Factory.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FileInterface.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontEffect.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontEffectInstancer.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontEngineInterface.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontGlyph.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/FontMetrics.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Geometry.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/GeometryUtilities.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Header.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/RenderInterface.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/RenderInterfaceCompatibility.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/RenderManager.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ScriptInterface.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ScrollTypes.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Span.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Spritesheet.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/StableVector.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Stream.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/StreamMemory.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/StringUtilities.h"
@@ -285,6 +315,7 @@ target_sources(rmlui_core PRIVATE
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/StyleSheetTypes.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/StyleTypes.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/SystemInterface.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/TextShapingContext.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Texture.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Traits.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Transform.h"
@@ -293,6 +324,7 @@ target_sources(rmlui_core PRIVATE
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/TypeConverter.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/TypeConverter.inl"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Types.h"
+	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/UniqueRenderResource.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Unit.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/URL.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Utilities.h"
@@ -307,16 +339,6 @@ target_sources(rmlui_core PRIVATE
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Vertex.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/XMLNodeHandler.h"
 	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/XMLParser.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementForm.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementFormControl.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementFormControlInput.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementFormControlSelect.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementFormControlTextArea.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementProgress.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/Elements/ElementTabSet.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/ID.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core/RenderInterface.h"
-	"${PROJECT_SOURCE_DIR}/Include/RmlUi/Core.h"
 )
 
 set_common_target_options(rmlui_core)
