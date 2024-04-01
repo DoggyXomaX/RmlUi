@@ -155,7 +155,7 @@ int main(int /*argc*/, char** /*argv*/)
 		document->Show();
 
 		// Create event handlers.
-		for (const Rml::String& button_id : {"set-english", "set-arabic", "set-hindi"})
+		for (const Rml::String button_id : {"set-english", "set-arabic", "set-hindi"})
 			document->GetElementById(button_id)->AddEventListener(Rml::EventId::Click, new HarfBuzzEventListener(button_id, document));
 	}
 

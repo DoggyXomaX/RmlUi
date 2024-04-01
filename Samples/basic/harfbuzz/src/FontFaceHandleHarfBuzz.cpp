@@ -531,10 +531,12 @@ void FontFaceHandleHarfBuzz::ConfigureTextShapingBuffer(hb_buffer_t* shaping_buf
 
 	// Set buffer flags for additional text-shaping configuration.
 	int buffer_flags = HB_BUFFER_FLAG_DEFAULT | HB_BUFFER_FLAG_BOT | HB_BUFFER_FLAG_EOT;
+
+#if HB_VERSION_ATLEAST(5, 1, 0)
 	if (script == HB_SCRIPT_ARABIC)
 		buffer_flags |= HB_BUFFER_FLAG_PRODUCE_SAFE_TO_INSERT_TATWEEL;
-
-#ifdef RMLUI_DEBUG
+#endif
+#if defined(RMLUI_DEBUG) && HB_VERSION_ATLEAST(3, 4, 0)
 	buffer_flags |= HB_BUFFER_FLAG_VERIFY;
 #endif
 
