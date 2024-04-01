@@ -31,6 +31,7 @@ endfunction()
 function(install_runtime_dependencies)
 	if(WIN32 AND RMLUI_RUNTIME_DEPENDENCY_SET_ARG)
 		option(RMLUI_INSTALL_RUNTIME_DEPENDENCIES "Include runtime dependencies when installing RmlUi." ON)
+		mark_as_advanced(RMLUI_INSTALL_RUNTIME_DEPENDENCIES)
 		if(RMLUI_INSTALL_RUNTIME_DEPENDENCIES)
 			install(RUNTIME_DEPENDENCY_SET rmlui_runtime_dependencies
 				PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"

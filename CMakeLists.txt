@@ -20,7 +20,7 @@ include("${PROJECT_SOURCE_DIR}/CMake/OptionsLists.cmake")
 option(BUILD_SHARED_LIBS "CMake standard option. Choose whether to build shared RmlUi libraries." ON)
 
 # Declare project-specific options. Naming conventions:
-#   - Use "RMLUI_" prefix to make all options specific to this project easily identifiable.
+#   - Use "RMLUI_" prefix to make all options specific to this project easily identifiable, and avoid colliding with any parent project variables.
 #   - Do not include negations (such as "not" and "disable"), to avoid situations with double negation.
 #   - Do not include a verb prefix (such as "enable" and "build"), as these are often superfluous.
 option(RMLUI_SAMPLES "Build samples of the library." OFF)
