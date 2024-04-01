@@ -17,16 +17,16 @@ jobs:
         include:
           - cc: clang
             cxx: clang++
-            cmake_options: -DRMLUI_PRECOMPILED_HEADERS=OFF -DRMLUI_BACKEND=GLFW_GL2
+            cmake_options: -DRMLUI_BACKEND=GLFW_GL2 -DRMLUI_PRECOMPILED_HEADERS=OFF
           - cc: clang
             cxx: clang++
-            cmake_options: -DRMLUI_BACKEND=SDL_VK -DCMAKE_BUILD_TYPE=Debug
-          - cmake_options: -DBUILD_TESTING=ON -DRMLUI_PRECOMPILED_HEADERS=OFF
+            cmake_options: -DRMLUI_BACKEND=SDL_VK -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+          - cmake_options: -DRMLUI_BACKEND=GLFW_GL3 -DBUILD_TESTING=ON
             enable_testing: true
-          - cmake_options: -DRMLUI_LOTTIE_PLUGIN=ON -DRMLUI_BACKEND=X11_GL2
-          - cmake_options: -DRMLUI_CUSTOM_RTTI=ON -DCMAKE_CXX_FLAGS="-fno-exceptions -fno-rtti" -DRMLUI_BACKEND=SDL_GL2
-          - cmake_options: -DRMLUI_THIRDPARTY_CONTAINERS=OFF -DRMLUI_BACKEND=SFML_GL2
-          - cmake_options: -DRMLUI_BACKEND=SDL_VK -DRMLUI_VK_DEBUG=ON -DRMLUI_PRECOMPILED_HEADERS=OFF -DCMAKE_BUILD_TYPE=Debug
+          - cmake_options: -DRMLUI_BACKEND=X11_GL2 -DRMLUI_LOTTIE_PLUGIN=ON
+          - cmake_options: -DRMLUI_BACKEND=SDL_GL2 -DRMLUI_CUSTOM_RTTI=ON -DCMAKE_CXX_FLAGS="-fno-exceptions -fno-rtti"
+          - cmake_options: -DRMLUI_BACKEND=SFML_GL2 -DRMLUI_THIRDPARTY_CONTAINERS=OFF
+          - cmake_options: -DRMLUI_BACKEND=GLFW_VK -DCMAKE_BUILD_TYPE=Debug -DRMLUI_VK_DEBUG=ON -DRMLUI_PRECOMPILED_HEADERS=OFF
 
     steps:
     - uses: actions/checkout@v4
@@ -34,26 +34,58 @@ jobs:
     - name: Install Dependencies
       run: |-
         sudo apt-get update
-        sudo apt-get install cmake ninja-build libsdl2-dev libsdl2-image-dev libfreetype6-dev libglew-dev liblua5.2-dev libsfml-dev librlottie-dev libglfw3-dev
-
-    - name: Create Build Environment
-      run: cmake -E make_directory ${{github.workspace}}/Build
+        sudo apt-get install cmake ninja-build libsdl2-dev libsdl2-image-dev libfreetype6-dev libharfbuzz-dev libglew-dev liblua5.2-dev libsfml-dev librlottie-dev libglfw3-dev
 
     - name: Configure CMake
-      working-directory: ${{github.workspace}}/Build
       run: >-
-        cmake $GITHUB_WORKSPACE -G Ninja --preset samples -Wdev -Werror=dev -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRMLUI_WARNINGS_AS_ERRORS=ON
-        -DRMLUI_LUA_BINDINGS=ON
+        cmake -B Build -G Ninja --preset samples-all -DRMLUI_SVG_PLUGIN=OFF -Wdev -Werror=dev -DRMLUI_WARNINGS_AS_ERRORS=ON
         ${{ matrix.cmake_options }}
 
     - name: Build
-      working-directory: ${{github.workspace}}/Build
-      run: cmake --build . --config $BUILD_TYPE
+      run: cmake --build Build
 
     - name: Test
       if: ${{ matrix.enable_testing }}
       working-directory: ${{github.workspace}}/Build
-      run: ctest -C $BUILD_TYPE
+      run: ctest
+
+
+  Linux-legacy:
+    runs-on: ubuntu-20.04
+
+    env:
+      BUILD_TYPE: Release
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cc: clang
+            cxx: clang++
+            cmake_options: -DRMLUI_BACKEND=GLFW_GL2 -DCMAKE_BUILD_TYPE=Debug
+          - cc: clang
+            cxx: clang++
+            cmake_options: -DRMLUI_BACKEND=SDL_VK -DBUILD_TESTING=ON -DRMLUI_PRECOMPILED_HEADERS=OFF
+          - cmake_options: -DBUILD_TESTING=ON
+          - cmake_options: -DRMLUI_BACKEND=native -DCMAKE_BUILD_TYPE=Debug -DRMLUI_VK_DEBUG=ON
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |-
+          sudo apt-get update
+          sudo apt-get install cmake ninja-build libsdl2-dev libsdl2-image-dev libfreetype6-dev libharfbuzz-dev libglew-dev liblua5.2-dev libglfw3-dev
+
+      - name: Configure CMake
+        run: >-
+          cmake -B Build -G Ninja --preset samples-all -DRMLUI_SVG_PLUGIN=OFF -DRMLUI_LOTTIE_PLUGIN=OFF -Wdev -Werror=dev -DRMLUI_WARNINGS_AS_ERRORS=ON
+          ${{ matrix.cmake_options }}
+
+      - name: Build
+        run: cmake --build Build
 
 
   macOS:
@@ -77,13 +109,13 @@ jobs:
 
     - name: Configure CMake
       run: >-
-        cmake -B Build --preset samples -Wdev -Werror=dev -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRMLUI_WARNINGS_AS_ERRORS=ON
+        cmake -B Build --preset samples -Wdev -Werror=dev -DRMLUI_WARNINGS_AS_ERRORS=ON
         -DCMAKE_CXX_FLAGS="-DGL_SILENCE_DEPRECATION"
         -DRMLUI_LUA_BINDINGS=ON
         ${{ matrix.cmake_options }}
 
     - name: Build
-      run: cmake --build Build --config $BUILD_TYPE
+      run: cmake --build Build
 
 
   Windows:
@@ -109,7 +141,7 @@ jobs:
 
     - name: Configure CMake
       run: >-
-        cmake -B Build --preset samples -Wdev -Werror=dev -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE
+        cmake -B Build --preset samples -Wdev -Werror=dev -DBUILD_SHARED_LIBS=ON
         -DRMLUI_LUA_BINDINGS=ON -DRMLUI_WARNINGS_AS_ERRORS=ON
         -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ${{ matrix.cmake_options }}
 
@@ -129,15 +161,13 @@ jobs:
 
       - name: Install Dependencies
         run: |-
-          C:\msys64\usr\bin\bash -lc ("pacman --needed --noconfirm -S " +
+          C:\msys64\usr\bin\bash -lc ("pacman --needed --noconfirm --sync " +
             "mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-freetype mingw-w64-x86_64-lua " +
             "mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-glew")
 
       - name: Configure CMake
         run: |-
-          $env:CHERE_INVOKING="yes"
-          $env:MSYSTEM="MINGW64"
-          &C:\msys64\usr\bin\bash -lc ("cmake -B Build --preset samples -Wdev -Werror=dev -DCMAKE_BUILD_TYPE=Release " +
+          C:\msys64\usr\bin\bash -lc ("cmake -B Build --preset samples -Wdev -Werror=dev -DCMAKE_BUILD_TYPE=Release " +
             "-DBUILD_SHARED_LIBS=ON -DRMLUI_PRECOMPILED_HEADERS=OFF -DRMLUI_WARNINGS_AS_ERRORS=ON " +
             "-DRMLUI_BACKEND=SDL_GL3 -DRMLUI_LUA_BINDINGS=ON")
 

@@ -86,7 +86,7 @@ jobs:
       - name: Install Dependencies
         run: |-
           echo "Using vcpkg triplet: $env:VCPKG_DEFAULT_TRIPLET"
-          C:\vcpkg\vcpkg install freetype[core] glfw3[core] lua[core] lunasvg[core]
+          C:\vcpkg\vcpkg install glfw3[core] freetype[core] lua[core] lunasvg[core]
           cd Dependencies\rlottie
           cmake -B build -G "$env:GENERATOR" -A ${{ matrix.architecture == 'win32' && 'Win32' || 'x64' }} -DBUILD_SHARED_LIBS=ON -DLOTTIE_MODULE=OFF
           cmake --build build --target rlottie --config Release -- "/clp:ErrorsOnly"
@@ -97,6 +97,7 @@ jobs:
           -G "$env:GENERATOR"
           -A ${{ matrix.architecture == 'win32' && 'Win32' || 'x64' }}
           --preset samples-all
+          -DRMLUI_HARFBUZZ_SAMPLE=OFF
           -DRMLUI_BACKEND=GLFW_GL3
           -DBUILD_SHARED_LIBS=ON
           -DRMLUI_WARNINGS_AS_ERRORS=ON

@@ -30,8 +30,7 @@
 			"installDir": "Install",
 			"cacheVariables": {
 				"RMLUI_SAMPLES": true,
-				"BUILD_TESTING": true,
-				"BUILD_SHARED_LIBS": false
+				"BUILD_TESTING": true
 			},
 			"warnings": {
 				"dev": true
