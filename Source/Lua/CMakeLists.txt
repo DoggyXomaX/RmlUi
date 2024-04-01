@@ -85,6 +85,11 @@ target_link_libraries(rmlui_lua PUBLIC rmlui_core)
 # without the Lua header files, in particular `RmlUi/Lua/Lua.h` does not require Lua.
 target_link_libraries(rmlui_lua PUBLIC RmlUi::External::Lua)
 
+# Set up the necessary compile definition if Lua is compiled as C++.
+if(RMLUI_LUA_BINDINGS_LIBRARY STREQUAL "lua_as_cxx")
+	target_compile_definitions(rmlui_lua PUBLIC "RMLUI_LUA_AS_CXX")
+endif()
+
 # Set up definitions to export functions and classes as appropriate
 get_target_property(rmlui_lua_TYPE rmlui_lua "TYPE")
 if(rmlui_lua_TYPE STREQUAL "SHARED_LIBRARY")

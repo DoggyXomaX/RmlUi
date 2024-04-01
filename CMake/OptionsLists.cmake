@@ -25,5 +25,6 @@ set(RMLUI_FONT_ENGINE_OPTIONS
 
 set(RMLUI_LUA_BINDINGS_LIBRARY_OPTIONS
 	"lua"
+	"lua_as_cxx"
 	"luajit"
 )

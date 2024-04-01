@@ -58,7 +58,7 @@ endif()
 
 option(RMLUI_LUA_BINDINGS "Build Lua bindings." OFF)
 if(RMLUI_LUA_BINDINGS)
-	set(RMLUI_LUA_BINDINGS_LIBRARY "lua" CACHE STRING "Choose which library to use for lua bindings when enabled, either 'lua' or 'luajit'.")
+	set(RMLUI_LUA_BINDINGS_LIBRARY "lua" CACHE STRING "Choose which library to use for lua bindings when enabled.")
 	set_property(CACHE RMLUI_LUA_BINDINGS_LIBRARY PROPERTY STRINGS ${RMLUI_LUA_BINDINGS_LIBRARY_OPTIONS})
 	if(NOT RMLUI_LUA_BINDINGS_LIBRARY IN_LIST RMLUI_LUA_BINDINGS_LIBRARY_OPTIONS)
 		message(FATAL_ERROR "The RmlUi Lua binding library '${RMLUI_LUA_BINDINGS_LIBRARY}' specified in RMLUI_LUA_BINDINGS_LIBRARY is not valid. Valid options: ${RMLUI_LUA_BINDINGS_LIBRARY_OPTIONS}")
