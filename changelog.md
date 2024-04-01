@@ -234,7 +234,7 @@ input { nav: auto; nav-right: #ok_button; }
 
 ### Modernized CMake
 
-The CMake code has been fully rewritten from scratch with modern practices. Special thanks to @hobyst who laid the groundwork for this change, with a solid foundation and great guidelines. #198 #446 #551 (thanks @hobyst)
+The CMake code has been fully rewritten with modern practices. Special thanks to @hobyst who laid the groundwork for this change, with a solid foundation and great guidelines. #198 #446 #551 #606 (thanks @hobyst)
 
 While modernizing our CMake code, it was clear that we also needed to change our naming conventions. This leads to quite significant breaking changes for building and linking, but the result should make the library a lot easier to work with and link with.
 
@@ -255,12 +255,12 @@ Large parts of the CI workflows have also been rewritten to accommodate these ch
 
 We now export the following targets:
 
-| Target          | Description                                                     | 
+| Target          | Description                                                     |
 |-----------------|-----------------------------------------------------------------|
-| RmlUi::RmlUi    | Includes all sub-libraries of the project, as listed just below |   
-| RmlUi::Core     | The main library                                                |   
-| RmlUi::Debugger | The debugger library                                            |   
-| RmlUi::Lua      | The Lua plugin (when enabled)                                   |   
+| RmlUi::RmlUi    | Includes all sub-libraries of the project, as listed just below |
+| RmlUi::Core     | The main library                                                |
+| RmlUi::Debugger | The debugger library                                            |
+| RmlUi::Lua      | The Lua plugin (when enabled)                                   |
 
 When including RmlUi as a subdirectory, the targets are constructed as aliases. When using pre-built or installed binaries, they are constructed using imported targets, which are available through the exported build targets.
 
@@ -268,13 +268,13 @@ The internal target names have also been changed, although they are typically on
 
 #### New library filenames
 
-The library binaries have also changed names. These names would be suffixed by e.g. `.dll` on Windows, and so on. 
+The library binaries have also changed names. These names would be suffixed by e.g. `.dll` on Windows, and so on.
 
-| Library          | Description                   | 
+| Library          | Description                   |
 |------------------|-------------------------------|
-| `rmlui`          | The core (main) library       |   
-| `rmlui_debugger` | The debugger library          |   
-| `rmlui_lua`      | The Lua plugin (when enabled) |  
+| `rmlui`          | The core (main) library       |
+| `rmlui_debugger` | The debugger library          |
+| `rmlui_lua`      | The Lua plugin (when enabled) |
 
 #### New option names
 
@@ -313,11 +313,23 @@ The following table lists all the new option names.
 
 For reference, the following options have not changed names, as these are standard options used by CMake.
 
-| Unchanged options | Default value | 
+| Unchanged options | Default value |
 |-------------------|---------------|
-| CMAKE_BUILD_TYPE  |               |   
-| BUILD_SHARED_LIBS | ON            |    
-| BUILD_TESTING     | OFF           |   
+| CMAKE_BUILD_TYPE  |               |
+| BUILD_SHARED_LIBS | ON            |
+| BUILD_TESTING     | OFF           |
+
+#### CMake presets
+
+We now have CMake presets:
+
+- `samples` Enable samples but only those without extra dependencies.
+- `samples-all` Enable all samples, also those with extra dependencies.
+- `standalone` Build the library completely without any dependencies, the only sample available is `bitmapfont`.
+- `dev` Enable testing in addition to samples.
+- `dev-all` Enable testing in addition to samples, including those that require extra dependencies.
+
+The presets can be combined with other options, like `CMAKE_BUILD_TYPE` to select the desired build type when using single-configuration generators.
 
 ### Breaking changes
 
