@@ -159,6 +159,31 @@ if(UNIX)
 	target_link_libraries(rmlui_backend_GLFW_VK INTERFACE ${CMAKE_DL_LIBS})
 endif()
 
+add_library(rmlui_backend_BackwardCompatible_GLFW_GL2 INTERFACE)
+target_sources(rmlui_backend_BackwardCompatible_GLFW_GL2 INTERFACE
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_Platform_GLFW.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_Platform_GLFW.h"
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_BackwardCompatible/RmlUi_Renderer_BackwardCompatible_GL2.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_BackwardCompatible/RmlUi_Renderer_BackwardCompatible_GL2.h"
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_BackwardCompatible/RmlUi_Backend_BackwardCompatible_GLFW_GL2.cpp"
+)
+target_link_libraries(rmlui_backend_BackwardCompatible_GLFW_GL2 INTERFACE rmlui_backend_common_headers OpenGL::GL glfw)
+
+add_library(rmlui_backend_BackwardCompatible_GLFW_GL3 INTERFACE)
+target_sources(rmlui_backend_BackwardCompatible_GLFW_GL3 INTERFACE
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_Platform_GLFW.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_Platform_GLFW.h"
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_BackwardCompatible/RmlUi_Renderer_BackwardCompatible_GL3.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_BackwardCompatible/RmlUi_Renderer_BackwardCompatible_GL3.h"
+	"${CMAKE_CURRENT_LIST_DIR}/RmlUi_BackwardCompatible/RmlUi_Backend_BackwardCompatible_GLFW_GL3.cpp"
+)
+target_link_libraries(rmlui_backend_BackwardCompatible_GLFW_GL3 INTERFACE rmlui_backend_common_headers OpenGL::GL glfw)
+if(UNIX)
+	# The OpenGL 3 renderer implementation uses dlopen/dlclose
+	# This is required in some UNIX and UNIX-like operating systems to load shared object files at runtime
+	target_link_libraries(rmlui_backend_BackwardCompatible_GLFW_GL3 INTERFACE ${CMAKE_DL_LIBS})
+endif()
+
 if(RMLUI_IS_ROOT_PROJECT)
 	install(DIRECTORY "./"
 		DESTINATION "${CMAKE_INSTALL_DATADIR}/Backends"
