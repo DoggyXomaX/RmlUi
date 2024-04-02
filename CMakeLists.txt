@@ -156,11 +156,16 @@ endif()
 set_target_properties(rmlui PROPERTIES EXPORT_NAME "RmlUi")
 install(TARGETS rmlui EXPORT RmlUiTargets)
 
-install(EXPORT RmlUiTargets
-	DESTINATION "${RMLUI_INSTALL_TARGETS_DIR}"
-	NAMESPACE RmlUi::
-	FILE RmlUiTargets.cmake
-)
+if(RMLUI_IS_ROOT_PROJECT)
+	# Skip installing any targets when RmlUi is included using `add_subdirectory`. Otherwise, if any of RmlUi's linked
+	# dependencies are not exported, then this results in errors about the dependency not being in any export set.
+	install(EXPORT RmlUiTargets
+		DESTINATION "${RMLUI_INSTALL_TARGETS_DIR}"
+		NAMESPACE RmlUi::
+		FILE RmlUiTargets.cmake
+	)
+endif()
+
 install(DIRECTORY
 	"${CMAKE_CURRENT_SOURCE_DIR}/Include/RmlUi"
 	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
