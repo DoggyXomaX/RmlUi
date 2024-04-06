@@ -221,6 +221,10 @@ input { nav: auto; nav-right: #ok_button; }
 - Change `StringUtilities::DecodeRml` to improve compatibility with other string types, like `EASTL::string`. #472 #475 (thanks @gleblebedev)
 - Various CMake fixes for MacOS. #525 (thanks @NaLiJa)
 - Fix include path. #533 (thanks @gleblebedev)
+- Can now add Tracy in one of the following three ways. #516 #518
+  1. Using target `Tracy::TracyClient` from parent project.
+  2. Using find package in config mode.
+  3. With Tracy source files located in `Dependencies/Tracy`.
 
 ### Backends
 
@@ -306,10 +310,12 @@ The following table lists all the new option names.
 | RMLUI_SAMPLES                        | OFF           | BUILD_SAMPLES                  |                                                                                                                                         |
 | RMLUI_SVG_PLUGIN                     | OFF           | ENABLE_SVG_PLUGIN              |                                                                                                                                         |
 | RMLUI_THIRDPARTY_CONTAINERS          | ON            | NO_THIRDPARTY_CONTAINERS       |                                                                                                                                         |
+| RMLUI_TRACY_CONFIGURATION            | ON            |                                | New option for multi-config generators to add Tracy as a separate configuration.                                                        |
+| RMLUI_TRACY_MEMORY_PROFILING         | ON            |                                | New option to overload global operator new/delete for memory inspection with Tracy.                                                     |
 | RMLUI_TRACY_PROFILING                | OFF           | ENABLE_TRACY_PROFILING         |                                                                                                                                         |
-| RMLUI_VISUAL_TESTS_RML_DIRECTORIES   |               | VISUAL_TESTS_RML_DIRECTORIES   |                                                                                                                                         |
-| RMLUI_VISUAL_TESTS_COMPARE_DIRECTORY |               | VISUAL_TESTS_COMPARE_DIRECTORY |                                                                                                                                         |
 | RMLUI_VISUAL_TESTS_CAPTURE_DIRECTORY |               | VISUAL_TESTS_CAPTURE_DIRECTORY |                                                                                                                                         |
+| RMLUI_VISUAL_TESTS_COMPARE_DIRECTORY |               | VISUAL_TESTS_COMPARE_DIRECTORY |                                                                                                                                         |
+| RMLUI_VISUAL_TESTS_RML_DIRECTORIES   |               | VISUAL_TESTS_RML_DIRECTORIES   |                                                                                                                                         |
 
 For reference, the following options have not changed names, as these are standard options used by CMake.
 
@@ -318,6 +324,26 @@ For reference, the following options have not changed names, as these are standa
 | CMAKE_BUILD_TYPE  |               |
 | BUILD_SHARED_LIBS | ON            |
 | BUILD_TESTING     | OFF           |
+
+#### New exported definitions
+
+Certain CMake options, when changed from their default value, require clients to set definitions before including RmlUi. These are automatically set when using the exported CMake targets, otherwise users will need to define them manually.
+
+Some exported definition names have changed, as follows.
+
+| Definition                | Old definition         | Related CMake option  |
+|---------------------------|------------------------|-----------------------|
+| RMLUI_TRACY_PROFILING     | RMLUI_ENABLE_PROFILING | RMLUI_TRACY_PROFILING |
+| RMLUI_CUSTOM_RTTI         | RMLUI_USE_CUSTOM_RTTI  | RMLUI_CUSTOM_RTTI     |
+
+For reference, here follows all other possibly exported definitions.
+
+| Definition                      | Related CMake option            |
+|---------------------------------|---------------------------------|
+| RMLUI_STATIC_LIB                | BUILD_SHARED_LIBS               |
+| RMLUI_NO_THIRDPARTY_CONTAINERS  | RMLUI_THIRDPARTY_CONTAINERS     |
+| RMLUI_MATRIX_ROW_MAJOR          | RMLUI_MATRIX_ROW_MAJOR          |
+| RMLUI_CUSTOM_CONFIGURATION_FILE | RMLUI_CUSTOM_CONFIGURATION_FILE |
 
 #### CMake presets
 
@@ -335,7 +361,7 @@ The presets can be combined with other options, like `CMAKE_BUILD_TYPE` to selec
 
 #### CMake and linking
 
-- Most options, target names, and library filenames, have been changed, please see the tables above.
+- Most options, target names, library filenames, and certain exported definitions, have been changed. Please see the tables above.
 - CMake minimum version raised to 3.10.
 
 #### Layout
