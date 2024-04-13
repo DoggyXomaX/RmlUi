@@ -46,11 +46,10 @@ public:
 	/// Intercepts and handles key events.
 	void ProcessEvent(Rml::Event& event) override;
 
-	/// This will get called when we're added to the tree, which allows us to bind to events.
+	/// Receive notifications when child elements are added
+	/// This will only get called when we're added to the tree,
+	/// which allows us to bind to onload
 	void OnChildAdd(Rml::Element* element) override;
-
-	/// This will get called when we're removed from the tree, which allows us to clean up the event listeners previously added.
-	void OnChildRemove(Element* element) override;
 
 protected:
 	/// Updates the game.

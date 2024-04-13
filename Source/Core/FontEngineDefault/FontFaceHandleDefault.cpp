@@ -27,14 +27,12 @@
  */
 
 #include "FontFaceHandleDefault.h"
-#include "../../../Include/RmlUi/Core/Profiling.h"
 #include "../../../Include/RmlUi/Core/StringUtilities.h"
 #include "../TextureLayout.h"
 #include "FontFaceLayer.h"
 #include "FontProvider.h"
 #include "FreeTypeInterface.h"
 #include <algorithm>
-#include <numeric>
 
 namespace Rml {
 
@@ -85,8 +83,6 @@ const FontGlyphMap& FontFaceHandleDefault::GetGlyphs() const
 
 int FontFaceHandleDefault::GetStringWidth(const String& string, float letter_spacing, Character prior_character)
 {
-	RMLUI_ZoneScoped;
-
 	int width = 0;
 	for (auto it_string = StringIteratorU8(string); it_string; ++it_string)
 	{
@@ -172,7 +168,7 @@ int FontFaceHandleDefault::GenerateLayerConfiguration(const FontEffectList& font
 	return (int)(layer_configurations.size() - 1);
 }
 
-bool FontFaceHandleDefault::GenerateLayerTexture(Vector<byte>& texture_data, Vector2i& texture_dimensions, const FontEffect* font_effect,
+bool FontFaceHandleDefault::GenerateLayerTexture(UniquePtr<const byte[]>& texture_data, Vector2i& texture_dimensions, const FontEffect* font_effect,
 	int texture_id, int handle_version) const
 {
 	if (handle_version != version)
@@ -192,8 +188,8 @@ bool FontFaceHandleDefault::GenerateLayerTexture(Vector<byte>& texture_data, Vec
 	return it->layer->GenerateTexture(texture_data, texture_dimensions, texture_id, glyphs);
 }
 
-int FontFaceHandleDefault::GenerateString(RenderManager& render_manager, TexturedMeshList& mesh_list, const String& string, const Vector2f position,
-	const ColourbPremultiplied colour, const float opacity, const float letter_spacing, const int layer_configuration_index)
+int FontFaceHandleDefault::GenerateString(GeometryList& geometry, const String& string, const Vector2f position, const Colourb colour,
+	const float opacity, const float letter_spacing, const int layer_configuration_index)
 {
 	int geometry_index = 0;
 	int line_width = 0;
@@ -206,37 +202,45 @@ int FontFaceHandleDefault::GenerateString(RenderManager& render_manager, Texture
 	// Fetch the requested configuration and generate the geometry for each one.
 	const LayerConfiguration& layer_configuration = layer_configurations[layer_configuration_index];
 
-	// Each texture represents one geometry.
-	const int num_geometries = std::accumulate(layer_configuration.begin(), layer_configuration.end(), 0,
-		[](int sum, const FontFaceLayer* layer) { return sum + layer->GetNumTextures(); });
+	// Reserve for the common case of one texture per layer.
+	geometry.reserve(layer_configuration.size());
 
-	mesh_list.resize(num_geometries);
-
-	for (size_t layer_index = 0; layer_index < layer_configuration.size(); ++layer_index)
+	for (size_t i = 0; i < layer_configuration.size(); ++i)
 	{
-		FontFaceLayer* layer = layer_configuration[layer_index];
+		FontFaceLayer* layer = layer_configuration[i];
 
-		ColourbPremultiplied layer_colour;
+		Colourb layer_colour;
 		if (layer == base_layer)
+		{
 			layer_colour = colour;
+		}
 		else
-			layer_colour = layer->GetColour(opacity);
+		{
+			layer_colour = layer->GetColour();
+			if (opacity < 1.f)
+				layer_colour.alpha = byte(opacity * float(layer_colour.alpha));
+		}
 
 		const int num_textures = layer->GetNumTextures();
+
 		if (num_textures == 0)
 			continue;
 
-		RMLUI_ASSERT(geometry_index + num_textures <= (int)mesh_list.size());
+		// Resize the geometry list if required.
+		if ((int)geometry.size() < geometry_index + num_textures)
+			geometry.resize(geometry_index + num_textures);
+
+		RMLUI_ASSERT(geometry_index < (int)geometry.size());
+
+		// Bind the textures to the geometries.
+		for (int tex_index = 0; tex_index < num_textures; ++tex_index)
+			geometry[geometry_index + tex_index].SetTexture(layer->GetTexture(tex_index));
 
 		line_width = 0;
 		Character prior_character = Character::Null;
 
-		// Set the mesh and textures to the geometries.
-		for (int tex_index = 0; tex_index < num_textures; ++tex_index)
-			mesh_list[geometry_index + tex_index].texture = layer->GetTexture(render_manager, tex_index);
-
-		mesh_list[geometry_index].mesh.indices.reserve(string.size() * 6);
-		mesh_list[geometry_index].mesh.vertices.reserve(string.size() * 4);
+		geometry[geometry_index].GetIndices().reserve(string.size() * 6);
+		geometry[geometry_index].GetVertices().reserve(string.size() * 4);
 
 		for (auto it_string = StringIteratorU8(string); it_string; ++it_string)
 		{
@@ -249,12 +253,11 @@ int FontFaceHandleDefault::GenerateString(RenderManager& render_manager, Texture
 			// Adjust the cursor for the kerning between this character and the previous one.
 			line_width += GetKerning(prior_character, character);
 
-			ColourbPremultiplied glyph_color = layer_colour;
 			// Use white vertex colors on RGB glyphs.
-			if (layer == base_layer && glyph->color_format == ColorFormat::RGBA8)
-				glyph_color = ColourbPremultiplied(layer_colour.alpha, layer_colour.alpha);
+			const Colourb glyph_color =
+				(layer == base_layer && glyph->color_format == ColorFormat::RGBA8 ? Colourb(255, layer_colour.alpha) : layer_colour);
 
-			layer->GenerateGeometry(&mesh_list[geometry_index], character, Vector2f(position.x + line_width, position.y), glyph_color);
+			layer->GenerateGeometry(&geometry[geometry_index], character, Vector2f(position.x + line_width, position.y), glyph_color);
 
 			line_width += glyph->advance;
 			line_width += (int)letter_spacing;
@@ -263,6 +266,9 @@ int FontFaceHandleDefault::GenerateString(RenderManager& render_manager, Texture
 
 		geometry_index += num_textures;
 	}
+
+	// Cull any excess geometry from a previous generation.
+	geometry.resize(geometry_index);
 
 	return Math::Max(line_width, 0);
 }

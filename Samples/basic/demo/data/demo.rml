@@ -140,14 +140,14 @@ p.title
 }
 #decorators button.gradient
 {
-	decorator: vertical-gradient( #415857 #5990A3 );
+	decorator: gradient( vertical #415857 #5990A3 );
 	border: 3dp #415857;
 	border-radius: 8dp;
 	margin-right: 12dp;
 }
 #decorators button.gradient.horizontal
 {
-	decorator: horizontal-gradient( #DB6565 #F1B58A );
+	decorator: gradient( horizontal #DB6565 #F1B58A );
 	border-color: #DB6565;
 }
 #decorators button.gradient:hover
@@ -199,9 +199,6 @@ p.title
 	border: 1dp #777;
 	font-effect: shadow( 1dp 1dp #333 );
 }
-.image-mode.repeat > div {
-	height: 120dp;
-}
 #decorators .image-mode > div > p
 {
 	margin: -2em 0 0 0;
@@ -226,9 +223,6 @@ p.title
 .fit-cover      { decorator: image( icon-invader cover      ); }
 .fit-scale-none { decorator: image( icon-invader scale-none ); }
 .fit-scale-down { decorator: image( icon-invader scale-down ); }
-.fit-repeat   { decorator: image( /assets/alien_small.tga repeat ); }
-.fit-repeat-x { decorator: image( /assets/alien_small.tga repeat-x ); }
-.fit-repeat-y { decorator: image( /assets/alien_small.tga repeat-y ); }
 .orientation-vertical   { decorator: image( icon-invader flip-vertical   scale-none ); }
 .orientation-horizontal { decorator: image( icon-invader flip-horizontal scale-none ); }
 .orientation-rotate     { decorator: image( icon-invader rotate-180      scale-none ); }
@@ -360,7 +354,7 @@ p.title
 	margin-left: -20dp;
 	width: 40dp;
 	height: 200dp;
-	decorator: vertical-gradient( #daf0 #fef6 );
+	decorator: gradient( vertical #daf0 #fef6 );
 }
 #transition:hover .ray
 {
@@ -602,14 +596,6 @@ progress {
 {
 	height: 12dp;
 }
-form input, form textarea, form select
-{
-	nav: vertical;
-}
-form .nav-auto, form input.checkbox, form input.radio
-{
-	nav: auto;
-}
 </style>
 </head>
 
@@ -722,11 +708,6 @@ form .nav-auto, form input.checkbox, form input.radio
 			<div class="fit-cover"></div>
 			<div class="fit-scale-none"></div>
 			<div class="fit-scale-down"></div>
-		</div>
-		<div class="image-mode repeat">
-			<div class="fit-repeat"><p>repeat</p></div>
-			<div class="fit-repeat-x"><p>repeat-x</p></div>
-			<div class="fit-repeat-y"><p>repeat-y</p></div>
 		</div>
 		<h1>Image decorator alignment modes</h1>
 		<div class="image-mode">
@@ -844,21 +825,21 @@ form .nav-auto, form input.checkbox, form input.radio
 		</div>
 		<h2>Email and password</h2>
 		<div>
-			<input type="text" name="email" class="nav-auto"/>
-			<input type="password" name="password" class="nav-auto"/>
+			<input type="text" name="email"/>
+			<input type="password" name="password"/>
 		</div>
 		<h2>Favorite animal</h2>
 		<div>
 			<label><input type="radio" name="animal" value="dog" checked/> Dog </label>
 			<label><input type="radio" name="animal" value="cat"/> Cat </label>
 			<label><input type="radio" name="animal" value="narwhal"/> Narwhal </label>
-			<label><input type="radio" name="animal" value="no" style="nav-down: #lasagne"/> I don't like animals </label>
+			<label><input type="radio" name="animal" value="no"/> I don't like animals </label>
 		</div>
 		<h2>Favorite meals</h2>
 		<div>
 			<label><input type="checkbox" name="meals" value="pizza" checked/> Pizza </label>
 			<label><input type="checkbox" name="meals" value="pasta" checked/> Pasta </label>
-			<label><input type="checkbox" name="meals" value="lasagne" id="lasagne" checked/> Lasagne </label>
+			<label><input type="checkbox" name="meals" value="lasagne" checked/> Lasagne </label>
 		</div>
 		<h2>Rating</h2>
 		<div>

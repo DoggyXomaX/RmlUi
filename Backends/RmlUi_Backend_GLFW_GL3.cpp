@@ -74,11 +74,15 @@ bool Backend::Initialize(const char* name, int width, int height, bool allow_res
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
 
+	// Request stencil buffer of at least 8-bit size to supporting clipping on transformed elements.
+	glfwWindowHint(GLFW_STENCIL_BITS, 8);
+
+	// Enable MSAA for better-looking visuals, especially when transforms are applied.
+	glfwWindowHint(GLFW_SAMPLES, 2);
+
 	// Apply window properties and create it.
 	glfwWindowHint(GLFW_RESIZABLE, allow_resize ? GLFW_TRUE : GLFW_FALSE);
 	glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 	GLFWwindow* window = glfwCreateWindow(width, height, name, nullptr, nullptr);
 	if (!window)
@@ -178,8 +182,8 @@ void Backend::RequestExit()
 void Backend::BeginFrame()
 {
 	RMLUI_ASSERT(data);
-	data->render_interface.Clear();
 	data->render_interface.BeginFrame();
+	data->render_interface.Clear();
 }
 
 void Backend::PresentFrame()
@@ -238,8 +242,8 @@ static void SetupCallbacks(GLFWwindow* window)
 	glfwSetCursorEnterCallback(window, [](GLFWwindow* /*window*/, int entered) { RmlGLFW::ProcessCursorEnterCallback(data->context, entered); });
 
 	// Mouse input
-	glfwSetCursorPosCallback(window, [](GLFWwindow* window, double xpos, double ypos) {
-		RmlGLFW::ProcessCursorPosCallback(data->context, window, xpos, ypos, data->glfw_active_modifiers);
+	glfwSetCursorPosCallback(window, [](GLFWwindow* /*window*/, double xpos, double ypos) {
+		RmlGLFW::ProcessCursorPosCallback(data->context, xpos, ypos, data->glfw_active_modifiers);
 	});
 
 	glfwSetMouseButtonCallback(window, [](GLFWwindow* /*window*/, int button, int action, int mods) {

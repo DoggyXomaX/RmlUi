@@ -32,12 +32,12 @@
 
 namespace Rml {
 
-void FontEngineInterfaceDefault::Initialize()
+FontEngineInterfaceDefault::FontEngineInterfaceDefault()
 {
 	FontProvider::Initialise();
 }
 
-void FontEngineInterfaceDefault::Shutdown()
+FontEngineInterfaceDefault::~FontEngineInterfaceDefault()
 {
 	FontProvider::Shutdown();
 }
@@ -47,10 +47,10 @@ bool FontEngineInterfaceDefault::LoadFontFace(const String& file_name, bool fall
 	return FontProvider::LoadFontFace(file_name, fallback_face, weight);
 }
 
-bool FontEngineInterfaceDefault::LoadFontFace(Span<const byte> data, const String& font_family, Style::FontStyle style, Style::FontWeight weight,
-	bool fallback_face)
+bool FontEngineInterfaceDefault::LoadFontFace(const byte* data, int data_size, const String& font_family, Style::FontStyle style,
+	Style::FontWeight weight, bool fallback_face)
 {
-	return FontProvider::LoadFontFace(data, font_family, style, weight, fallback_face);
+	return FontProvider::LoadFontFace(data, data_size, font_family, style, weight, fallback_face);
 }
 
 FontFaceHandle FontEngineInterfaceDefault::GetFontFaceHandle(const String& family, Style::FontStyle style, Style::FontWeight weight, int size)
@@ -71,20 +71,17 @@ const FontMetrics& FontEngineInterfaceDefault::GetFontMetrics(FontFaceHandle han
 	return handle_default->GetFontMetrics();
 }
 
-int FontEngineInterfaceDefault::GetStringWidth(FontFaceHandle handle, const String& string, const TextShapingContext& text_shaping_context,
-	Character prior_character)
+int FontEngineInterfaceDefault::GetStringWidth(FontFaceHandle handle, const String& string, float letter_spacing, Character prior_character)
 {
 	auto handle_default = reinterpret_cast<FontFaceHandleDefault*>(handle);
-	return handle_default->GetStringWidth(string, text_shaping_context.letter_spacing, prior_character);
+	return handle_default->GetStringWidth(string, letter_spacing, prior_character);
 }
 
-int FontEngineInterfaceDefault::GenerateString(RenderManager& render_manager, FontFaceHandle handle, FontEffectsHandle font_effects_handle,
-	const String& string, const Vector2f& position, ColourbPremultiplied colour, float opacity, const TextShapingContext& text_shaping_context,
-	TexturedMeshList& mesh_list)
+int FontEngineInterfaceDefault::GenerateString(FontFaceHandle handle, FontEffectsHandle font_effects_handle, const String& string,
+	const Vector2f& position, const Colourb& colour, float opacity, float letter_spacing, GeometryList& geometry)
 {
 	auto handle_default = reinterpret_cast<FontFaceHandleDefault*>(handle);
-	return handle_default->GenerateString(render_manager, mesh_list, string, position, colour, opacity, text_shaping_context.letter_spacing,
-		(int)font_effects_handle);
+	return handle_default->GenerateString(geometry, string, position, colour, opacity, letter_spacing, (int)font_effects_handle);
 }
 
 int FontEngineInterfaceDefault::GetVersion(FontFaceHandle handle)

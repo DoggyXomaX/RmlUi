@@ -24,7 +24,7 @@
 			}
 		</style>
 	</head>
-	<body template="window" onload="restore" onkeydown="onescape goto main_menu">
+	<body template="window" onload="restore">
 		<form onsubmit="store; goto main_menu" onchange="enable_accept">
 			<div>
 				<p>

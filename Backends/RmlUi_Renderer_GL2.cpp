@@ -36,14 +36,17 @@
 #if defined RMLUI_PLATFORM_WIN32
 	#include "RmlUi_Include_Windows.h"
 	#include <gl/Gl.h>
+	#include <gl/Glu.h>
 #elif defined RMLUI_PLATFORM_MACOSX
 	#include <AGL/agl.h>
 	#include <OpenGL/gl.h>
 	#include <OpenGL/glext.h>
+	#include <OpenGL/glu.h>
 #elif defined RMLUI_PLATFORM_UNIX
 	#include "RmlUi_Include_Xlib.h"
 	#include <GL/gl.h>
 	#include <GL/glext.h>
+	#include <GL/glu.h>
 	#include <GL/glx.h>
 #endif
 
@@ -67,12 +70,7 @@ void RenderInterface_GL2::BeginFrame()
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_ALWAYS, 1, GLuint(-1));
-	glStencilMask(GLuint(-1));
-	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	Rml::Matrix4f projection = Rml::Matrix4f::ProjectOrtho(0, (float)viewport_width, (float)viewport_height, 0, -10000, 10000);
 	glMatrixMode(GL_PROJECTION);
@@ -90,28 +88,13 @@ void RenderInterface_GL2::EndFrame() {}
 void RenderInterface_GL2::Clear()
 {
 	glClearStencil(0);
-	glClearColor(0, 0, 0, 0);
+	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
-Rml::CompiledGeometryHandle RenderInterface_GL2::CompileGeometry(Rml::Span<const Rml::Vertex> vertices, Rml::Span<const int> indices)
+void RenderInterface_GL2::RenderGeometry(Rml::Vertex* vertices, int /*num_vertices*/, int* indices, int num_indices, const Rml::TextureHandle texture,
+	const Rml::Vector2f& translation)
 {
-	GeometryView* data = new GeometryView{vertices, indices};
-	return reinterpret_cast<Rml::CompiledGeometryHandle>(data);
-}
-
-void RenderInterface_GL2::ReleaseGeometry(Rml::CompiledGeometryHandle geometry)
-{
-	delete reinterpret_cast<GeometryView*>(geometry);
-}
-
-void RenderInterface_GL2::RenderGeometry(Rml::CompiledGeometryHandle handle, Rml::Vector2f translation, Rml::TextureHandle texture)
-{
-	const GeometryView* geometry = reinterpret_cast<GeometryView*>(handle);
-	const Rml::Vertex* vertices = geometry->vertices.data();
-	const int* indices = geometry->indices.data();
-	const int num_indices = (int)geometry->indices.size();
-
 	glPushMatrix();
 	glTranslatef(translation.x, translation.y, 0);
 
@@ -142,71 +125,62 @@ void RenderInterface_GL2::RenderGeometry(Rml::CompiledGeometryHandle handle, Rml
 void RenderInterface_GL2::EnableScissorRegion(bool enable)
 {
 	if (enable)
-		glEnable(GL_SCISSOR_TEST);
+	{
+		if (!transform_enabled)
+		{
+			glEnable(GL_SCISSOR_TEST);
+			glDisable(GL_STENCIL_TEST);
+		}
+		else
+		{
+			glDisable(GL_SCISSOR_TEST);
+			glEnable(GL_STENCIL_TEST);
+		}
+	}
 	else
+	{
 		glDisable(GL_SCISSOR_TEST);
-}
-
-void RenderInterface_GL2::SetScissorRegion(Rml::Rectanglei region)
-{
-	glScissor(region.Left(), viewport_height - region.Bottom(), region.Width(), region.Height());
-}
-
-void RenderInterface_GL2::EnableClipMask(bool enable)
-{
-	if (enable)
-		glEnable(GL_STENCIL_TEST);
-	else
 		glDisable(GL_STENCIL_TEST);
+	}
 }
 
-void RenderInterface_GL2::RenderToClipMask(Rml::ClipMaskOperation operation, Rml::CompiledGeometryHandle geometry, Rml::Vector2f translation)
+void RenderInterface_GL2::SetScissorRegion(int x, int y, int width, int height)
 {
-	RMLUI_ASSERT(glIsEnabled(GL_STENCIL_TEST));
-	using Rml::ClipMaskOperation;
-
-	const bool clear_stencil = (operation == ClipMaskOperation::Set || operation == ClipMaskOperation::SetInverse);
-	if (clear_stencil)
+	if (!transform_enabled)
 	{
-		// @performance Increment the reference value instead of clearing each time.
+		glScissor(x, viewport_height - (y + height), width, height);
+	}
+	else
+	{
+		// clear the stencil buffer
+		glStencilMask(GLuint(-1));
 		glClear(GL_STENCIL_BUFFER_BIT);
-	}
 
-	GLint stencil_test_value = 0;
-	glGetIntegerv(GL_STENCIL_REF, &stencil_test_value);
+		// fill the stencil buffer
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		glDepthMask(GL_FALSE);
+		glStencilFunc(GL_NEVER, 1, GLuint(-1));
+		glStencilOp(GL_REPLACE, GL_KEEP, GL_KEEP);
 
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-	glStencilFunc(GL_ALWAYS, GLint(1), GLuint(-1));
+		float fx = (float)x;
+		float fy = (float)y;
+		float fwidth = (float)width;
+		float fheight = (float)height;
 
-	switch (operation)
-	{
-	case ClipMaskOperation::Set:
-	{
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-		stencil_test_value = 1;
-	}
-	break;
-	case ClipMaskOperation::SetInverse:
-	{
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-		stencil_test_value = 0;
-	}
-	break;
-	case ClipMaskOperation::Intersect:
-	{
-		glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
-		stencil_test_value += 1;
-	}
-	break;
-	}
+		// draw transformed quad
+		GLfloat vertices[] = {fx, fy, 0, fx, fy + fheight, 0, fx + fwidth, fy + fheight, 0, fx + fwidth, fy, 0};
+		glDisableClientState(GL_COLOR_ARRAY);
+		glVertexPointer(3, GL_FLOAT, 0, vertices);
+		GLushort indices[] = {1, 2, 0, 3};
+		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, indices);
+		glEnableClientState(GL_COLOR_ARRAY);
 
-	RenderGeometry(geometry, translation, {});
-
-	// Restore state
-	// @performance Cache state so we don't toggle it unnecessarily.
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-	glStencilFunc(GL_EQUAL, stencil_test_value, GLuint(-1));
+		// prepare for drawing the real thing
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glDepthMask(GL_TRUE);
+		glStencilMask(0);
+		glStencilFunc(GL_EQUAL, 1, GLuint(-1));
+	}
 }
 
 // Set to byte packing, or the compiler will expand our struct, which means it won't read correctly from file
@@ -228,7 +202,7 @@ struct TGAHeader {
 // Restore packing
 #pragma pack()
 
-Rml::TextureHandle RenderInterface_GL2::LoadTexture(Rml::Vector2i& texture_dimensions, const Rml::String& source)
+bool RenderInterface_GL2::LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source)
 {
 	Rml::FileInterface* file_interface = Rml::GetFileInterface();
 	Rml::FileHandle file_handle = file_interface->Open(source);
@@ -248,20 +222,20 @@ Rml::TextureHandle RenderInterface_GL2::LoadTexture(Rml::Vector2i& texture_dimen
 		return false;
 	}
 
-	using Rml::byte;
-	Rml::UniquePtr<byte[]> buffer(new byte[buffer_size]);
-	file_interface->Read(buffer.get(), buffer_size, file_handle);
+	char* buffer = new char[buffer_size];
+	file_interface->Read(buffer, buffer_size, file_handle);
 	file_interface->Close(file_handle);
 
 	TGAHeader header;
-	memcpy(&header, buffer.get(), sizeof(TGAHeader));
+	memcpy(&header, buffer, sizeof(TGAHeader));
 
 	int color_mode = header.bitsPerPixel / 8;
-	const size_t image_size = header.width * header.height * 4; // We always make 32bit textures
+	int image_size = header.width * header.height * 4; // We always make 32bit textures
 
 	if (header.dataType != 2)
 	{
 		Rml::Log::Message(Rml::Log::LT_ERROR, "Only 24/32bit uncompressed TGAs are supported.");
+		delete[] buffer;
 		return false;
 	}
 
@@ -269,30 +243,25 @@ Rml::TextureHandle RenderInterface_GL2::LoadTexture(Rml::Vector2i& texture_dimen
 	if (color_mode < 3)
 	{
 		Rml::Log::Message(Rml::Log::LT_ERROR, "Only 24 and 32bit textures are supported.");
+		delete[] buffer;
 		return false;
 	}
 
-	const byte* image_src = buffer.get() + sizeof(TGAHeader);
-	Rml::UniquePtr<byte[]> image_dest_buffer(new byte[image_size]);
-	byte* image_dest = image_dest_buffer.get();
+	const char* image_src = buffer + sizeof(TGAHeader);
+	unsigned char* image_dest = new unsigned char[image_size];
 
-	// Targa is BGR, swap to RGB, flip Y axis, and convert to premultiplied alpha.
+	// Targa is BGR, swap to RGB and flip Y axis
 	for (long y = 0; y < header.height; y++)
 	{
 		long read_index = y * header.width * color_mode;
-		long write_index = ((header.imageDescriptor & 32) != 0) ? read_index : (header.height - y - 1) * header.width * 4;
+		long write_index = ((header.imageDescriptor & 32) != 0) ? read_index : (header.height - y - 1) * header.width * color_mode;
 		for (long x = 0; x < header.width; x++)
 		{
 			image_dest[write_index] = image_src[read_index + 2];
 			image_dest[write_index + 1] = image_src[read_index + 1];
 			image_dest[write_index + 2] = image_src[read_index];
 			if (color_mode == 4)
-			{
-				const byte alpha = image_src[read_index + 3];
-				for (size_t j = 0; j < 3; j++)
-					image_dest[write_index + j] = byte((image_dest[write_index + j] * alpha) / 255);
-				image_dest[write_index + 3] = alpha;
-			}
+				image_dest[write_index + 3] = image_src[read_index + 3];
 			else
 				image_dest[write_index + 3] = 255;
 
@@ -304,29 +273,36 @@ Rml::TextureHandle RenderInterface_GL2::LoadTexture(Rml::Vector2i& texture_dimen
 	texture_dimensions.x = header.width;
 	texture_dimensions.y = header.height;
 
-	return GenerateTexture({image_dest, image_size}, texture_dimensions);
+	bool success = GenerateTexture(texture_handle, image_dest, texture_dimensions);
+
+	delete[] image_dest;
+	delete[] buffer;
+
+	return success;
 }
 
-Rml::TextureHandle RenderInterface_GL2::GenerateTexture(Rml::Span<const Rml::byte> source, Rml::Vector2i source_dimensions)
+bool RenderInterface_GL2::GenerateTexture(Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions)
 {
 	GLuint texture_id = 0;
 	glGenTextures(1, &texture_id);
 	if (texture_id == 0)
 	{
 		Rml::Log::Message(Rml::Log::LT_ERROR, "Failed to generate texture.");
-		return {};
+		return false;
 	}
 
 	glBindTexture(GL_TEXTURE_2D, texture_id);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, source_dimensions.x, source_dimensions.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, source.data());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, source_dimensions.x, source_dimensions.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, source);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	return (Rml::TextureHandle)texture_id;
+	texture_handle = (Rml::TextureHandle)texture_id;
+
+	return true;
 }
 
 void RenderInterface_GL2::ReleaseTexture(Rml::TextureHandle texture_handle)

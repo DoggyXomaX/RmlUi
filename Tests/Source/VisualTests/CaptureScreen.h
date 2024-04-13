@@ -29,30 +29,28 @@
 #ifndef RMLUI_TESTS_VISUALTESTS_CAPTURESCREEN_H
 #define RMLUI_TESTS_VISUALTESTS_CAPTURESCREEN_H
 
-#include <RmlUi/Core/Mesh.h>
 #include <RmlUi/Core/RenderInterface.h>
 #include <RmlUi/Core/Types.h>
+#include <RmlUi/Core/Vertex.h>
 
 struct ComparisonResult {
 	bool skipped = true;
 	bool success = false;
 	bool is_equal = false;
 	double similarity_score = 0;
-	size_t absolute_difference_sum = 0;
-	size_t max_absolute_difference_single_pixel = 0;
+	std::size_t absolute_difference_sum = 0;
 	Rml::String error_msg;
 };
 
 struct TextureGeometry {
 	Rml::TextureHandle texture_handle = 0;
-	Rml::CompiledGeometryHandle geometry_handle = 0;
-	Rml::Mesh mesh;
+	Rml::Vertex vertices[4];
+	int indices[6] = {};
 };
 
 bool CaptureScreenshot(const Rml::String& filename, int clip_width);
 
-ComparisonResult CompareScreenToPreviousCapture(Rml::RenderInterface* render_interface, const Rml::String& filename, TextureGeometry* out_reference,
-	TextureGeometry* out_highlight);
+ComparisonResult CompareScreenToPreviousCapture(Rml::RenderInterface* render_interface, const Rml::String& filename, TextureGeometry* out_geometry);
 
 void RenderTextureGeometry(Rml::RenderInterface* render_interface, TextureGeometry& geometry);
 

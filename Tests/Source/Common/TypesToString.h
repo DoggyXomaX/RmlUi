@@ -39,17 +39,17 @@
  */
 namespace Rml {
 
-inline std::ostream& operator<<(std::ostream& os, const Colourb& value)
+std::ostream& operator<<(std::ostream& os, const Colourb& value)
 {
 	os << ToString(value);
 	return os;
 }
-inline std::ostream& operator<<(std::ostream& os, const Vector2f& value)
+std::ostream& operator<<(std::ostream& os, const Vector2f& value)
 {
 	os << ToString(value);
 	return os;
 }
-inline std::ostream& operator<<(std::ostream& os, const Vector2i& value)
+std::ostream& operator<<(std::ostream& os, const Vector2i& value)
 {
 	os << ToString(value);
 	return os;

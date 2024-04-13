@@ -34,28 +34,27 @@
 #include "../../Include/RmlUi/Core/FontEngineInterface.h"
 #include "../../Include/RmlUi/Core/Plugin.h"
 #include "../../Include/RmlUi/Core/RenderInterface.h"
-#include "../../Include/RmlUi/Core/RenderManager.h"
 #include "../../Include/RmlUi/Core/StyleSheetSpecification.h"
 #include "../../Include/RmlUi/Core/SystemInterface.h"
 #include "../../Include/RmlUi/Core/Types.h"
 #include "EventSpecification.h"
 #include "FileInterfaceDefault.h"
+#include "GeometryDatabase.h"
 #include "PluginRegistry.h"
-#include "RenderManagerAccess.h"
 #include "StyleSheetFactory.h"
 #include "StyleSheetParser.h"
 #include "TemplateCache.h"
 #include "TextureDatabase.h"
 
-#ifndef RMLUI_NO_FONT_INTERFACE_DEFAULT
+#ifdef RMLUI_FONT_INTERFACE_FREETYPE
 	#include "FontEngineDefault/FontEngineInterfaceDefault.h"
 #endif
 
-#ifdef RMLUI_ENABLE_LOTTIE_PLUGIN
+#ifdef RMLUI_LOTTIE_PLUGIN
 	#include "../Lottie/LottiePlugin.h"
 #endif
 
-#ifdef RMLUI_ENABLE_SVG_PLUGIN
+#ifdef RMLUI_SVG_PLUGIN
 	#include "../SVG/SVGPlugin.h"
 #endif
 
@@ -76,8 +75,6 @@ static FontEngineInterface* font_interface = nullptr;
 static UniquePtr<FileInterface> default_file_interface;
 static UniquePtr<FontEngineInterface> default_font_interface;
 
-static UniquePtr<SmallUnorderedMap<RenderInterface*, UniquePtr<RenderManager>>> render_managers;
-
 static bool initialised = false;
 
 using ContextMap = UnorderedMap<String, ContextPtr>;
@@ -94,10 +91,17 @@ bool Initialise()
 {
 	RMLUI_ASSERTMSG(!initialised, "Rml::Initialise() called, but RmlUi is already initialised!");
 
+	Log::Initialise();
+
 	// Check for valid interfaces, or install default interfaces as appropriate.
 	if (!system_interface)
 	{
 		Log::Message(Log::LT_ERROR, "No system interface set!");
+		return false;
+	}
+	if (!render_interface)
+	{
+		Log::Message(Log::LT_ERROR, "No render interface set!");
 		return false;
 	}
 
@@ -112,9 +116,13 @@ bool Initialise()
 #endif
 	}
 
+	EventSpecificationInterface::Initialize();
+
+	TextureDatabase::Initialise();
+
 	if (!font_interface)
 	{
-#ifndef RMLUI_NO_FONT_INTERFACE_DEFAULT
+#ifdef RMLUI_FONT_INTERFACE_FREETYPE
 		default_font_interface = MakeUnique<FontEngineInterfaceDefault>();
 		font_interface = default_font_interface.get();
 #else
@@ -122,14 +130,6 @@ bool Initialise()
 		return false;
 #endif
 	}
-
-	EventSpecificationInterface::Initialize();
-
-	render_managers = MakeUnique<SmallUnorderedMap<RenderInterface*, UniquePtr<RenderManager>>>();
-	if (render_interface)
-		(*render_managers)[render_interface] = MakeUnique<RenderManager>(render_interface);
-
-	font_interface->Initialize();
 
 	StyleSheetSpecification::Initialise();
 	StyleSheetParser::Initialise();
@@ -140,10 +140,10 @@ bool Initialise()
 	Factory::Initialise();
 
 	// Initialise plugins integrated with Core.
-#ifdef RMLUI_ENABLE_LOTTIE_PLUGIN
+#ifdef RMLUI_LOTTIE_PLUGIN
 	Lottie::Initialise();
 #endif
-#ifdef RMLUI_ENABLE_SVG_PLUGIN
+#ifdef RMLUI_SVG_PLUGIN
 	SVG::Initialise();
 #endif
 
@@ -171,20 +171,22 @@ void Shutdown()
 	StyleSheetParser::Shutdown();
 	StyleSheetSpecification::Shutdown();
 
-	font_interface->Shutdown();
+	font_interface = nullptr;
+	default_font_interface.reset();
 
-	render_managers.reset();
+	TextureDatabase::Shutdown();
 
 	initialised = false;
 
-	font_interface = nullptr;
 	render_interface = nullptr;
 	file_interface = nullptr;
 	system_interface = nullptr;
 
-	default_font_interface.reset();
 	default_file_interface.reset();
 
+	Log::Shutdown();
+
+	// Release any memory pools
 	ReleaseMemoryPools();
 }
 
@@ -205,6 +207,12 @@ SystemInterface* GetSystemInterface()
 
 void SetRenderInterface(RenderInterface* _render_interface)
 {
+	if (initialised)
+	{
+		Log::Message(Log::LT_ERROR, "The render interface is not allowed to be set or changed after RmlUi has been initialised.");
+		return;
+	}
+
 	render_interface = _render_interface;
 }
 
@@ -233,20 +241,10 @@ FontEngineInterface* GetFontEngineInterface()
 	return font_interface;
 }
 
-Context* CreateContext(const String& name, const Vector2i dimensions, RenderInterface* render_interface_for_context)
+Context* CreateContext(const String& name, const Vector2i dimensions)
 {
 	if (!initialised)
 		return nullptr;
-
-	if (!render_interface_for_context)
-		render_interface_for_context = render_interface;
-
-	if (!render_interface_for_context)
-	{
-		Log::Message(Log::LT_WARNING, "Failed to create context '%s', no render interface specified and no default render interface exists.",
-			name.c_str());
-		return nullptr;
-	}
 
 	if (GetContext(name))
 	{
@@ -254,12 +252,7 @@ Context* CreateContext(const String& name, const Vector2i dimensions, RenderInte
 		return nullptr;
 	}
 
-	// Each unique render interface gets its own render manager.
-	auto& render_manager = (*render_managers)[render_interface_for_context];
-	if (!render_manager)
-		render_manager = MakeUnique<RenderManager>(render_interface_for_context);
-
-	ContextPtr new_context = Factory::InstanceContext(name, render_manager.get());
+	ContextPtr new_context = Factory::InstanceContext(name);
 	if (!new_context)
 	{
 		Log::Message(Log::LT_WARNING, "Failed to instance context '%s', instancer returned nullptr.", name.c_str());
@@ -326,9 +319,9 @@ bool LoadFontFace(const String& file_path, bool fallback_face, Style::FontWeight
 	return font_interface->LoadFontFace(file_path, fallback_face, weight);
 }
 
-bool LoadFontFace(Span<const byte> data, const String& font_family, Style::FontStyle style, Style::FontWeight weight, bool fallback_face)
+bool LoadFontFace(const byte* data, int data_size, const String& font_family, Style::FontStyle style, Style::FontWeight weight, bool fallback_face)
 {
-	return font_interface->LoadFontFace(data, font_family, style, weight, fallback_face);
+	return font_interface->LoadFontFace(data, data_size, font_family, style, weight, fallback_face);
 }
 
 void RegisterPlugin(Plugin* plugin)
@@ -354,51 +347,25 @@ EventId RegisterEventType(const String& type, bool interruptible, bool bubbles, 
 
 StringList GetTextureSourceList()
 {
-	StringList result;
-	if (!render_managers)
-		return result;
-	for (const auto& render_manager : *render_managers)
-	{
-		RenderManagerAccess::GetTextureSourceList(render_manager.second.get(), result);
-	}
-	return result;
+	return TextureDatabase::GetSourceList();
 }
 
-void ReleaseTextures(RenderInterface* match_render_interface)
+void ReleaseTextures()
 {
-	if (!render_managers)
-		return;
-	for (auto& render_manager : *render_managers)
-	{
-		if (!match_render_interface || render_manager.first == match_render_interface)
-			RenderManagerAccess::ReleaseAllTextures(render_manager.second.get());
-	}
+	TextureDatabase::ReleaseTextures();
 }
 
-bool ReleaseTexture(const String& source, RenderInterface* match_render_interface)
+void ReleaseCompiledGeometry()
 {
-	if (!render_managers)
-		return false;
-	bool result = false;
-	for (auto& render_manager : *render_managers)
-	{
-		if (!match_render_interface || render_manager.first == match_render_interface)
-		{
-			if (RenderManagerAccess::ReleaseTexture(render_manager.second.get(), source))
-				result = true;
-		}
-	}
-	return result;
+	return GeometryDatabase::ReleaseAll();
 }
 
-void ReleaseCompiledGeometry(RenderInterface* match_render_interface)
+void ReleaseMemoryPools()
 {
-	if (!render_managers)
-		return;
-	for (auto& render_manager : *render_managers)
+	if (observerPtrBlockPool && observerPtrBlockPool->GetNumAllocatedObjects() <= 0)
 	{
-		if (!match_render_interface || render_manager.first == match_render_interface)
-			RenderManagerAccess::ReleaseAllCompiledGeometry(render_manager.second.get());
+		delete observerPtrBlockPool;
+		observerPtrBlockPool = nullptr;
 	}
 }
 
@@ -415,24 +382,5 @@ void ReleaseFontResources()
 			name_context.second->Update();
 	}
 }
-
-void ReleaseMemoryPools()
-{
-	if (observerPtrBlockPool && observerPtrBlockPool->GetNumAllocatedObjects() <= 0)
-	{
-		delete observerPtrBlockPool;
-		observerPtrBlockPool = nullptr;
-	}
-}
-
-// Functions that need to be accessible within the Core library, but not publicly.
-namespace CoreInternal {
-
-	bool HasRenderManager(RenderInterface* match_render_interface)
-	{
-		return render_managers && render_managers->find(match_render_interface) != render_managers->end();
-	}
-
-} // namespace CoreInternal
 
 } // namespace Rml

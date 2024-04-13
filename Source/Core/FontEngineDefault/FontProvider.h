@@ -63,7 +63,8 @@ public:
 	static bool LoadFontFace(const String& file_name, bool fallback_face, Style::FontWeight weight = Style::FontWeight::Auto);
 
 	/// Adds a new font face from memory.
-	static bool LoadFontFace(Span<const byte> data, const String& font_family, Style::FontStyle style, Style::FontWeight weight, bool fallback_face);
+	static bool LoadFontFace(const byte* data, int data_size, const String& font_family, Style::FontStyle style, Style::FontWeight weight,
+		bool fallback_face);
 
 	/// Return the number of fallback font faces.
 	static int CountFallbackFontFaces();
@@ -80,7 +81,7 @@ private:
 
 	static FontProvider& Get();
 
-	bool LoadFontFace(Span<const byte> data, bool fallback_face, UniquePtr<byte[]> face_memory, const String& source, String font_family,
+	bool LoadFontFace(const byte* data, int data_size, bool fallback_face, UniquePtr<byte[]> face_memory, const String& source, String font_family,
 		Style::FontStyle style, Style::FontWeight weight);
 
 	bool AddFace(FontFaceHandleFreetype face, const String& family, Style::FontStyle style, Style::FontWeight weight, bool fallback_face,

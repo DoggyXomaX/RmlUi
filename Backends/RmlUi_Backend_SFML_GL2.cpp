@@ -46,7 +46,8 @@ class RenderInterface_GL2_SFML : public RenderInterface_GL2 {
 public:
 	// -- Inherited from Rml::RenderInterface --
 
-	void RenderGeometry(Rml::CompiledGeometryHandle handle, Rml::Vector2f translation, Rml::TextureHandle texture) override
+	void RenderGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture,
+		const Rml::Vector2f& translation) override
 	{
 		if (texture)
 		{
@@ -54,10 +55,10 @@ public:
 			texture = RenderInterface_GL2::TextureEnableWithoutBinding;
 		}
 
-		RenderInterface_GL2::RenderGeometry(handle, translation, texture);
+		RenderInterface_GL2::RenderGeometry(vertices, num_vertices, indices, num_indices, texture, translation);
 	}
 
-	Rml::TextureHandle LoadTexture(Rml::Vector2i& texture_dimensions, const Rml::String& source) override
+	bool LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source) override
 	{
 		Rml::FileInterface* file_interface = Rml::GetFileInterface();
 		Rml::FileHandle file_handle = file_interface->Open(source);
@@ -68,42 +69,31 @@ public:
 		size_t buffer_size = file_interface->Tell(file_handle);
 		file_interface->Seek(file_handle, 0, SEEK_SET);
 
-		using Rml::byte;
-		Rml::UniquePtr<byte[]> buffer(new byte[buffer_size]);
-		file_interface->Read(buffer.get(), buffer_size, file_handle);
+		char* buffer = new char[buffer_size];
+		file_interface->Read(buffer, buffer_size, file_handle);
 		file_interface->Close(file_handle);
-
-		sf::Image image;
-		if (!image.loadFromMemory(buffer.get(), buffer_size))
-			return false;
-
-		// Convert colors to premultiplied alpha, which is necessary for correct alpha compositing.
-		for (unsigned int x = 0; x < image.getSize().x; x++)
-		{
-			for (unsigned int y = 0; y < image.getSize().y; y++)
-			{
-				sf::Color color = image.getPixel(x, y);
-				color.r = (sf::Uint8)((color.r * color.a) / 255);
-				color.g = (sf::Uint8)((color.g * color.a) / 255);
-				color.b = (sf::Uint8)((color.b * color.a) / 255);
-				image.setPixel(x, y, color);
-			}
-		}
 
 		sf::Texture* texture = new sf::Texture();
 		texture->setSmooth(true);
 
-		if (!texture->loadFromImage(image))
+		bool success = texture->loadFromMemory(buffer, buffer_size);
+
+		delete[] buffer;
+
+		if (success)
+		{
+			texture_handle = (Rml::TextureHandle)texture;
+			texture_dimensions = Rml::Vector2i(texture->getSize().x, texture->getSize().y);
+		}
+		else
 		{
 			delete texture;
-			return false;
 		}
 
-		texture_dimensions = Rml::Vector2i(texture->getSize().x, texture->getSize().y);
-		return (Rml::TextureHandle)texture;
+		return success;
 	}
 
-	Rml::TextureHandle GenerateTexture(Rml::Span<const Rml::byte> source, Rml::Vector2i source_dimensions) override
+	bool GenerateTexture(Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions) override
 	{
 		sf::Texture* texture = new sf::Texture();
 		texture->setSmooth(true);
@@ -114,9 +104,10 @@ public:
 			return false;
 		}
 
-		texture->update(source.data(), source_dimensions.x, source_dimensions.y, 0, 0);
+		texture->update(source, source_dimensions.x, source_dimensions.y, 0, 0);
+		texture_handle = (Rml::TextureHandle)texture;
 
-		return (Rml::TextureHandle)texture;
+		return true;
 	}
 
 	void ReleaseTexture(Rml::TextureHandle texture_handle) override { delete (sf::Texture*)texture_handle; }

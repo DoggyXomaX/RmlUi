@@ -88,8 +88,7 @@ void ElementGame::OnUpdate()
 
 void ElementGame::OnRender()
 {
-	if (Rml::Context* context = GetContext())
-		game->Render(context->GetRenderManager(), context->GetDensityIndependentPixelRatio());
+	game->Render(GetContext()->GetDensityIndependentPixelRatio());
 }
 
 void ElementGame::OnChildAdd(Rml::Element* element)
@@ -101,17 +100,5 @@ void ElementGame::OnChildAdd(Rml::Element* element)
 		GetOwnerDocument()->AddEventListener(Rml::EventId::Load, this);
 		GetOwnerDocument()->AddEventListener(Rml::EventId::Keydown, this);
 		GetOwnerDocument()->AddEventListener(Rml::EventId::Keyup, this);
-	}
-}
-
-void ElementGame::OnChildRemove(Rml::Element* element)
-{
-	Rml::Element::OnChildRemove(element);
-
-	if (element == this)
-	{
-		GetOwnerDocument()->RemoveEventListener(Rml::EventId::Load, this);
-		GetOwnerDocument()->RemoveEventListener(Rml::EventId::Keydown, this);
-		GetOwnerDocument()->RemoveEventListener(Rml::EventId::Keyup, this);
 	}
 }

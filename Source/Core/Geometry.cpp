@@ -27,35 +27,137 @@
  */
 
 #include "../../Include/RmlUi/Core/Geometry.h"
-#include "RenderManagerAccess.h"
+#include "../../Include/RmlUi/Core/Context.h"
+#include "../../Include/RmlUi/Core/Core.h"
+#include "../../Include/RmlUi/Core/Element.h"
+#include "../../Include/RmlUi/Core/Profiling.h"
+#include "../../Include/RmlUi/Core/RenderInterface.h"
+#include "GeometryDatabase.h"
+#include <utility>
 
 namespace Rml {
 
-Geometry::Geometry(RenderManager* render_manager, StableVectorIndex resource_handle) : UniqueRenderResource(render_manager, resource_handle) {}
-
-void Geometry::Render(Vector2f translation, Texture texture, const CompiledShader& shader) const
+Geometry::Geometry()
 {
-	if (resource_handle == StableVectorIndex::Invalid)
-		return;
+	database_handle = GeometryDatabase::Insert(this);
+}
+
+Geometry::Geometry(Geometry&& other) noexcept
+{
+	MoveFrom(other);
+	database_handle = GeometryDatabase::Insert(this);
+}
+
+Geometry& Geometry::operator=(Geometry&& other) noexcept
+{
+	MoveFrom(other);
+	// Keep the database handles from construction unchanged, they are tied to the *this* pointer and should not change.
+	return *this;
+}
+
+void Geometry::MoveFrom(Geometry& other) noexcept
+{
+	vertices = std::move(other.vertices);
+	indices = std::move(other.indices);
+
+	texture = std::exchange(other.texture, nullptr);
+
+	compiled_geometry = std::exchange(other.compiled_geometry, 0);
+	compile_attempted = std::exchange(other.compile_attempted, false);
+}
+
+Geometry::~Geometry()
+{
+	GeometryDatabase::Erase(database_handle);
+
+	Release();
+}
+
+void Geometry::Render(Vector2f translation)
+{
+	RenderInterface* const render_interface = ::Rml::GetRenderInterface();
+	RMLUI_ASSERT(render_interface);
 
 	translation = translation.Round();
 
-	RenderManagerAccess::Render(render_manager, *this, translation, texture, shader);
+	// Render our compiled geometry if possible.
+	if (compiled_geometry)
+	{
+		RMLUI_ZoneScopedN("RenderCompiled");
+		render_interface->RenderCompiledGeometry(compiled_geometry, translation);
+	}
+	// Otherwise, if we actually have geometry, try to compile it if we haven't already done so, otherwise render it in
+	// immediate mode.
+	else
+	{
+		if (vertices.empty() || indices.empty())
+			return;
+
+		RMLUI_ZoneScopedN("RenderGeometry");
+
+		if (!compile_attempted)
+		{
+			compile_attempted = true;
+			compiled_geometry = render_interface->CompileGeometry(&vertices[0], (int)vertices.size(), &indices[0], (int)indices.size(),
+				texture ? texture->GetHandle() : 0);
+
+			// If we managed to compile the geometry, we can clear the local copy of vertices and indices and
+			// immediately render the compiled version.
+			if (compiled_geometry)
+			{
+				render_interface->RenderCompiledGeometry(compiled_geometry, translation);
+				return;
+			}
+		}
+
+		// Either we've attempted to compile before (and failed), or the compile we just attempted failed; either way,
+		// render the uncompiled version.
+		render_interface->RenderGeometry(&vertices[0], (int)vertices.size(), &indices[0], (int)indices.size(), texture ? texture->GetHandle() : 0,
+			translation);
+	}
 }
 
-Mesh Geometry::Release(ReleaseMode mode)
+Vector<Vertex>& Geometry::GetVertices()
 {
-	if (resource_handle == StableVectorIndex::Invalid)
-		return Mesh();
+	return vertices;
+}
 
-	Mesh mesh = RenderManagerAccess::ReleaseResource(render_manager, *this);
-	Clear();
-	if (mode == ReleaseMode::ClearMesh)
+Vector<int>& Geometry::GetIndices()
+{
+	return indices;
+}
+
+const Texture* Geometry::GetTexture() const
+{
+	return texture;
+}
+
+void Geometry::SetTexture(const Texture* _texture)
+{
+	texture = _texture;
+	Release();
+}
+
+void Geometry::Release(bool clear_buffers)
+{
+	if (compiled_geometry)
 	{
-		mesh.vertices.clear();
-		mesh.indices.clear();
+		::Rml::GetRenderInterface()->ReleaseCompiledGeometry(compiled_geometry);
+		compiled_geometry = 0;
 	}
-	return mesh;
+
+	compile_attempted = false;
+
+	if (clear_buffers)
+	{
+		vertices.clear();
+		indices.clear();
+	}
+}
+
+Geometry::operator bool() const
+{
+	return !indices.empty();
 }
 
 } // namespace Rml

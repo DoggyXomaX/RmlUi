@@ -33,15 +33,12 @@
 #include "../../Include/RmlUi/Core/ElementUtilities.h"
 #include "../../Include/RmlUi/Core/Event.h"
 #include "../../Include/RmlUi/Core/FontEngineInterface.h"
-#include "../../Include/RmlUi/Core/MeshUtilities.h"
+#include "../../Include/RmlUi/Core/GeometryUtilities.h"
 #include "../../Include/RmlUi/Core/Profiling.h"
 #include "../../Include/RmlUi/Core/Property.h"
-#include "../../Include/RmlUi/Core/RenderManager.h"
-#include "../../Include/RmlUi/Core/TextShapingContext.h"
 #include "ComputeProperty.h"
 #include "ElementDefinition.h"
 #include "ElementStyle.h"
-#include "TransformState.h"
 
 namespace Rml {
 
@@ -100,8 +97,6 @@ void ElementText::OnRender()
 	if (font_face_handle == 0)
 		return;
 
-	RenderManager& render_manager = GetContext()->GetRenderManager();
-
 	// If our font effects have potentially changed, update it and force a geometry generation if necessary.
 	if (font_effects_dirty && UpdateFontEffects())
 		geometry_dirty = true;
@@ -116,7 +111,7 @@ void ElementText::OnRender()
 
 	// Regenerate the geometry if the colour or font configuration has altered.
 	if (geometry_dirty)
-		GenerateGeometry(render_manager, font_face_handle);
+		GenerateGeometry(font_face_handle);
 
 	// Regenerate text decoration if necessary.
 	if (decoration_property != generated_decoration)
@@ -127,14 +122,12 @@ void ElementText::OnRender()
 		}
 		else
 		{
-			Mesh mesh;
 			if (decoration)
-				mesh = decoration->Release(Geometry::ReleaseMode::ClearMesh);
+				decoration->Release(true);
 			else
 				decoration = MakeUnique<Geometry>();
 
-			GenerateDecoration(mesh, font_face_handle);
-			*decoration = GetRenderManager()->MakeGeometry(std::move(mesh));
+			GenerateDecoration(font_face_handle);
 		}
 
 		generated_decoration = decoration_property;
@@ -143,37 +136,37 @@ void ElementText::OnRender()
 	const Vector2f translation = GetAbsoluteOffset();
 
 	bool render = true;
-
-	// Do a visibility test against the scissor region to avoid unnecessary render calls. Instead of handling
-	// culling in complicated transform cases, for simplicity we always proceed to render if one is detected.
-	Rectanglei scissor_region = render_manager.GetState().scissor_region;
-	if (!scissor_region.Valid())
-		scissor_region = Rectanglei::FromSize(render_manager.GetViewport());
-
-	if (!GetTransformState() || !GetTransformState()->GetTransform())
+	Vector2i clip_origin;
+	Vector2i clip_dimensions;
+	if (GetContext()->GetActiveClipRegion(clip_origin, clip_dimensions))
 	{
 		const FontMetrics& font_metrics = GetFontEngineInterface()->GetFontMetrics(GetFontFaceHandle());
-		const int ascent = Math::RoundUpToInteger(font_metrics.ascent);
-		const int descent = Math::RoundUpToInteger(font_metrics.descent);
+		float clip_top = (float)clip_origin.y;
+		float clip_left = (float)clip_origin.x;
+		float clip_right = (float)(clip_origin.x + clip_dimensions.x);
+		float clip_bottom = (float)(clip_origin.y + clip_dimensions.y);
+		float ascent = font_metrics.ascent;
+		float descent = font_metrics.descent;
 
 		render = false;
 		for (const Line& line : lines)
 		{
-			const Vector2i baseline = Vector2i(translation + line.position);
-			const Rectanglei line_region = Rectanglei::FromCorners(baseline - Vector2i(0, ascent), baseline + Vector2i(line.width, descent));
+			float x_left = translation.x + line.position.x;
+			float x_right = x_left + line.width;
+			float y = translation.y + line.position.y;
+			float y_top = y - ascent;
+			float y_bottom = y + descent;
 
-			if (line_region.Valid() && scissor_region.Intersects(line_region))
-			{
-				render = true;
+			render = !(x_left > clip_right || x_right < clip_left || y_top > clip_bottom || y_bottom < clip_top);
+			if (render)
 				break;
-			}
 		}
 	}
 
 	if (render)
 	{
 		for (size_t i = 0; i < geometry.size(); ++i)
-			geometry[i].geometry.Render(translation, geometry[i].texture);
+			geometry[i].Render(translation);
 	}
 
 	if (decoration)
@@ -203,7 +196,7 @@ bool ElementText::GenerateLine(String& line, int& line_length, float& line_width
 
 	// Determine how we are processing white-space while formatting the text.
 	using namespace Style;
-	const auto& computed = GetComputedValues();
+	auto& computed = GetComputedValues();
 	WhiteSpace white_space_property = computed.white_space();
 	bool collapse_white_space =
 		white_space_property == WhiteSpace::Normal || white_space_property == WhiteSpace::Nowrap || white_space_property == WhiteSpace::Preline;
@@ -212,7 +205,8 @@ bool ElementText::GenerateLine(String& line, int& line_length, float& line_width
 	bool break_at_endline =
 		white_space_property == WhiteSpace::Pre || white_space_property == WhiteSpace::Prewrap || white_space_property == WhiteSpace::Preline;
 
-	const TextShapingContext text_shaping_context{ computed.language(), computed.direction(), computed.letter_spacing() };
+	float letter_spacing = computed.letter_spacing();
+
 	TextTransform text_transform_property = computed.text_transform();
 	WordBreak word_break = computed.word_break();
 
@@ -234,7 +228,7 @@ bool ElementText::GenerateLine(String& line, int& line_length, float& line_width
 		// Generate the next token and determine its pixel-length.
 		bool break_line = BuildToken(token, next_token_begin, string_end, line.empty() && trim_whitespace_prefix, collapse_white_space,
 			break_at_endline, text_transform_property, decode_escape_characters);
-		int token_width = font_engine_interface->GetStringWidth(font_face_handle, token, text_shaping_context, previous_codepoint);
+		int token_width = font_engine_interface->GetStringWidth(font_face_handle, token, letter_spacing, previous_codepoint);
 
 		// If we're breaking to fit a line box, check if the token can fit on the line before we add it.
 		if (break_at_line)
@@ -259,7 +253,7 @@ bool ElementText::GenerateLine(String& line, int& line_length, float& line_width
 						const char* partial_string_end = StringUtilities::SeekBackwardUTF8(token_begin + i, token_begin);
 						BuildToken(token, next_token_begin, partial_string_end, line.empty() && trim_whitespace_prefix, collapse_white_space,
 							break_at_endline, text_transform_property, decode_escape_characters);
-						token_width = font_engine_interface->GetStringWidth(font_face_handle, token, text_shaping_context, previous_codepoint);
+						token_width = font_engine_interface->GetStringWidth(font_face_handle, token, letter_spacing, previous_codepoint);
 
 						if (force_loop_break_after_next || token_width <= max_token_width)
 						{
@@ -305,7 +299,10 @@ bool ElementText::GenerateLine(String& line, int& line_length, float& line_width
 
 void ElementText::ClearLines()
 {
-	geometry.clear();
+	// Clear the rendering information.
+	for (size_t i = 0; i < geometry.size(); ++i)
+		geometry[i].Release(true);
+
 	lines.clear();
 	generated_decoration = Style::TextDecoration::None;
 }
@@ -340,7 +337,8 @@ void ElementText::OnPropertyChange(const PropertyIdSet& changed_properties)
 		const float new_opacity = computed.opacity();
 		const bool opacity_changed = opacity != new_opacity;
 
-		ColourbPremultiplied new_colour = computed.color().ToPremultiplied(new_opacity);
+		Colourb new_colour = computed.color();
+		new_colour.alpha = byte(new_opacity * float(new_colour.alpha));
 		colour_changed = colour != new_colour;
 
 		if (colour_changed)
@@ -355,13 +353,11 @@ void ElementText::OnPropertyChange(const PropertyIdSet& changed_properties)
 		}
 	}
 
-	if (changed_properties.Contains(PropertyId::FontFamily) ||     //
-		changed_properties.Contains(PropertyId::FontWeight) ||     //
-		changed_properties.Contains(PropertyId::FontStyle) ||      //
-		changed_properties.Contains(PropertyId::FontSize) ||       //
-		changed_properties.Contains(PropertyId::LetterSpacing) ||  //
-		changed_properties.Contains(PropertyId::RmlUi_Language) || //
-		changed_properties.Contains(PropertyId::RmlUi_Direction))
+	if (changed_properties.Contains(PropertyId::FontFamily) || //
+		changed_properties.Contains(PropertyId::FontWeight) || //
+		changed_properties.Contains(PropertyId::FontStyle) ||  //
+		changed_properties.Contains(PropertyId::FontSize) ||   //
+		changed_properties.Contains(PropertyId::LetterSpacing))
 	{
 		font_face_changed = true;
 
@@ -399,12 +395,11 @@ void ElementText::OnPropertyChange(const PropertyIdSet& changed_properties)
 		// Re-colour the decoration geometry.
 		if (decoration)
 		{
-			Mesh mesh = decoration->Release();
-			for (Vertex& vertex : mesh.vertices)
-				vertex.colour = colour;
+			Vector<Vertex>& vertices = decoration->GetVertices();
+			for (size_t i = 0; i < vertices.size(); ++i)
+				vertices[i].colour = colour;
 
-			if (RenderManager* render_manager = GetRenderManager())
-				*decoration = render_manager->MakeGeometry(std::move(mesh));
+			decoration->Release();
 		}
 	}
 }
@@ -446,38 +441,32 @@ bool ElementText::UpdateFontEffects()
 	return false;
 }
 
-void ElementText::GenerateGeometry(RenderManager& render_manager, const FontFaceHandle font_face_handle)
+void ElementText::GenerateGeometry(const FontFaceHandle font_face_handle)
 {
 	RMLUI_ZoneScopedC(0xD2691E);
 
-	const auto& computed = GetComputedValues();
-	const TextShapingContext text_shaping_context{computed.language(), computed.direction(), computed.letter_spacing()};
+	// Release the old geometry ...
+	for (size_t i = 0; i < geometry.size(); ++i)
+		geometry[i].Release(true);
 
-	// Release the old geometry, and reuse the mesh buffers.
-	TexturedMeshList mesh_list(geometry.size());
-	for (size_t i = 0; i < geometry.size(); i++)
-		mesh_list[i].mesh = geometry[i].geometry.Release(Geometry::ReleaseMode::ClearMesh);
-
-	// Generate the new geometry, one line at a time.
+	// ... and generate it all again!
 	for (size_t i = 0; i < lines.size(); ++i)
-	{
-		lines[i].width = GetFontEngineInterface()->GenerateString(render_manager, font_face_handle, font_effects_handle, lines[i].text,
-			lines[i].position, colour, opacity, text_shaping_context, mesh_list);
-	}
-
-	// Apply the new geometry and textures.
-	geometry.resize(mesh_list.size());
-	for (size_t i = 0; i < geometry.size(); i++)
-	{
-		geometry[i].geometry = render_manager.MakeGeometry(std::move(mesh_list[i].mesh));
-		geometry[i].texture = mesh_list[i].texture;
-	}
+		GenerateGeometry(font_face_handle, lines[i]);
 
 	generated_decoration = Style::TextDecoration::None;
+
 	geometry_dirty = false;
 }
 
-void ElementText::GenerateDecoration(Mesh& mesh, const FontFaceHandle font_face_handle)
+void ElementText::GenerateGeometry(const FontFaceHandle font_face_handle, Line& line)
+{
+	const float letter_spacing = GetComputedValues().letter_spacing();
+
+	line.width = GetFontEngineInterface()->GenerateString(font_face_handle, font_effects_handle, line.text, line.position, colour, opacity,
+		letter_spacing, geometry);
+}
+
+void ElementText::GenerateDecoration(const FontFaceHandle font_face_handle)
 {
 	RMLUI_ZoneScopedC(0xA52A2A);
 	RMLUI_ASSERT(decoration);
@@ -497,7 +486,7 @@ void ElementText::GenerateDecoration(Mesh& mesh, const FontFaceHandle font_face_
 	{
 		const Vector2f position = {line.position.x, line.position.y + offset};
 		const Vector2f size = {(float)line.width, metrics.underline_thickness};
-		MeshUtilities::GenerateLine(mesh, position, size, colour);
+		GeometryUtilities::GenerateLine(decoration.get(), position, size, colour);
 	}
 }
 

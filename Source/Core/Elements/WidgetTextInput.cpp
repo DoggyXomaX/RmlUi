@@ -36,9 +36,9 @@
 #include "../../../Include/RmlUi/Core/Elements/ElementFormControl.h"
 #include "../../../Include/RmlUi/Core/Factory.h"
 #include "../../../Include/RmlUi/Core/FontEngineInterface.h"
+#include "../../../Include/RmlUi/Core/GeometryUtilities.h"
 #include "../../../Include/RmlUi/Core/Input.h"
 #include "../../../Include/RmlUi/Core/Math.h"
-#include "../../../Include/RmlUi/Core/MeshUtilities.h"
 #include "../../../Include/RmlUi/Core/StringUtilities.h"
 #include "../../../Include/RmlUi/Core/SystemInterface.h"
 #include "../Clock.h"
@@ -246,9 +246,6 @@ void WidgetTextInput::Select()
 
 void WidgetTextInput::SetSelectionRange(int selection_start, int selection_end)
 {
-	if (!IsFocused())
-		return;
-
 	const String& value = GetValue();
 	const int byte_start = ConvertCharacterOffsetToByteOffset(value, selection_start);
 	const int byte_end = ConvertCharacterOffsetToByteOffset(value, selection_end);
@@ -269,7 +266,6 @@ void WidgetTextInput::SetSelectionRange(int selection_start, int selection_end)
 	}
 
 	UpdateCursorPosition(true);
-	ShowCursor(true, true);
 
 	if (selection_changed)
 		FormatText();
@@ -291,8 +287,8 @@ void WidgetTextInput::UpdateSelectionColours()
 	// Determine what the colour of the selected text is. If our 'selection' element has the 'color'
 	// attribute set, then use that. Otherwise, use the inverse of our own text colour.
 	Colourb colour;
-	const Property* colour_property = selection_element->GetLocalProperty(PropertyId::Color);
-	if (colour_property)
+	const Property* colour_property = selection_element->GetLocalProperty("color");
+	if (colour_property != nullptr)
 		colour = colour_property->Get<Colourb>();
 	else
 	{
@@ -308,13 +304,11 @@ void WidgetTextInput::UpdateSelectionColours()
 	// If the 'background-color' property has been set on the 'selection' element, use that as the
 	// background colour for the selected text. Otherwise, use the inverse of the selected text
 	// colour.
-	colour_property = selection_element->GetLocalProperty(PropertyId::BackgroundColor);
-	if (colour_property)
-		colour = colour_property->Get<Colourb>();
+	colour_property = selection_element->GetLocalProperty("background-color");
+	if (colour_property != nullptr)
+		selection_colour = colour_property->Get<Colourb>();
 	else
-		colour = Colourb(255 - colour.red, 255 - colour.green, 255 - colour.blue, colour.alpha);
-
-	selection_colour = colour.ToPremultiplied();
+		selection_colour = Colourb(255 - colour.red, 255 - colour.green, 255 - colour.blue, colour.alpha);
 
 	// Color may have changed, so we update the cursor geometry.
 	GenerateCursor();
@@ -385,11 +379,6 @@ Element* WidgetTextInput::GetElement() const
 	return parent;
 }
 
-bool WidgetTextInput::IsFocused() const
-{
-	return cursor_timer > 0;
-}
-
 void WidgetTextInput::DispatchChangeEvent(bool linebreak)
 {
 	Dictionary parameters;
@@ -413,34 +402,33 @@ void WidgetTextInput::ProcessEvent(Event& event)
 		bool ctrl = event.GetParameter<int>("ctrl_key", 0) > 0;
 		bool alt = event.GetParameter<int>("alt_key", 0) > 0;
 		bool selection_changed = false;
-		bool out_of_bounds = false;
 
 		switch (key_identifier)
 		{
-			// clang-format off
+		// clang-format off
 		case Input::KI_NUMPAD4: if (numlock) break; //-fallthrough
-		case Input::KI_LEFT:    selection_changed = MoveCursorHorizontal(ctrl ? CursorMovement::PreviousWord : CursorMovement::Left, shift, out_of_bounds); break;
+		case Input::KI_LEFT:    selection_changed = MoveCursorHorizontal(ctrl ? CursorMovement::PreviousWord : CursorMovement::Left, shift); break;
 
 		case Input::KI_NUMPAD6: if (numlock) break; //-fallthrough
-		case Input::KI_RIGHT:   selection_changed = MoveCursorHorizontal(ctrl ? CursorMovement::NextWord : CursorMovement::Right, shift, out_of_bounds); break;
+		case Input::KI_RIGHT:   selection_changed = MoveCursorHorizontal(ctrl ? CursorMovement::NextWord : CursorMovement::Right, shift); break;
 
 		case Input::KI_NUMPAD8: if (numlock) break; //-fallthrough
-		case Input::KI_UP:      selection_changed = MoveCursorVertical(-1, shift, out_of_bounds); break;
+		case Input::KI_UP:      selection_changed = MoveCursorVertical(-1, shift); break;
 
 		case Input::KI_NUMPAD2: if (numlock) break; //-fallthrough
-		case Input::KI_DOWN:    selection_changed = MoveCursorVertical(1, shift, out_of_bounds); break;
+		case Input::KI_DOWN:    selection_changed = MoveCursorVertical(1, shift); break;
 
 		case Input::KI_NUMPAD7: if (numlock) break; //-fallthrough
-		case Input::KI_HOME:    selection_changed = MoveCursorHorizontal(ctrl ? CursorMovement::Begin : CursorMovement::BeginLine, shift, out_of_bounds); break;
+		case Input::KI_HOME:    selection_changed = MoveCursorHorizontal(ctrl ? CursorMovement::Begin : CursorMovement::BeginLine, shift); break;
 
 		case Input::KI_NUMPAD1: if (numlock) break; //-fallthrough
-		case Input::KI_END:     selection_changed = MoveCursorHorizontal(ctrl ? CursorMovement::End : CursorMovement::EndLine, shift, out_of_bounds); break;
+		case Input::KI_END:     selection_changed = MoveCursorHorizontal(ctrl ? CursorMovement::End : CursorMovement::EndLine, shift); break;
 
 		case Input::KI_NUMPAD9: if (numlock) break; //-fallthrough
-		case Input::KI_PRIOR:   selection_changed = MoveCursorVertical(-int(internal_dimensions.y / parent->GetLineHeight()) + 1, shift, out_of_bounds); break;
+		case Input::KI_PRIOR:   selection_changed = MoveCursorVertical(-int(internal_dimensions.y / parent->GetLineHeight()) + 1, shift); break;
 
 		case Input::KI_NUMPAD3: if (numlock) break; //-fallthrough
-		case Input::KI_NEXT:    selection_changed = MoveCursorVertical(int(internal_dimensions.y / parent->GetLineHeight()) - 1, shift, out_of_bounds); break;
+		case Input::KI_NEXT:    selection_changed = MoveCursorVertical(int(internal_dimensions.y / parent->GetLineHeight()) - 1, shift); break;
 
 		case Input::KI_BACK:
 		{
@@ -512,8 +500,7 @@ void WidgetTextInput::ProcessEvent(Event& event)
 		default: break;
 		}
 
-		if (!out_of_bounds || selection_changed)
-			event.StopPropagation();
+		event.StopPropagation();
 		if (selection_changed)
 			FormatText();
 	}
@@ -536,7 +523,6 @@ void WidgetTextInput::ProcessEvent(Event& event)
 	{
 		if (event.GetTargetElement() == parent)
 		{
-			parent->SetPseudoClass("focus-visible", true);
 			if (UpdateSelection(false))
 				FormatElement();
 			ShowCursor(true, false);
@@ -627,11 +613,10 @@ bool WidgetTextInput::AddCharacters(String string)
 
 bool WidgetTextInput::DeleteCharacters(CursorMovement direction)
 {
-	bool out_of_bounds;
 	// We set a selection of characters according to direction, and then delete it.
 	// If we already have a selection, we delete that first.
 	if (selection_length <= 0)
-		MoveCursorHorizontal(direction, true, out_of_bounds);
+		MoveCursorHorizontal(direction, true);
 
 	if (selection_length > 0)
 	{
@@ -651,10 +636,8 @@ void WidgetTextInput::CopySelection()
 	GetSystemInterface()->SetClipboardText(snippet);
 }
 
-bool WidgetTextInput::MoveCursorHorizontal(CursorMovement movement, bool select, bool& out_of_bounds)
+bool WidgetTextInput::MoveCursorHorizontal(CursorMovement movement, bool select)
 {
-	out_of_bounds = false;
-
 	const String& value = GetValue();
 
 	int cursor_line_index = 0, cursor_character_index = 0;
@@ -734,9 +717,7 @@ bool WidgetTextInput::MoveCursorHorizontal(CursorMovement movement, bool select,
 	case CursorMovement::End: absolute_cursor_index = INT_MAX; break;
 	}
 
-	const int unclamped_absolute_cursor_index = absolute_cursor_index;
 	absolute_cursor_index = Math::Clamp(absolute_cursor_index, 0, (int)GetValue().size());
-	out_of_bounds = (unclamped_absolute_cursor_index != absolute_cursor_index);
 
 	MoveCursorToCharacterBoundaries(seek_forward);
 	UpdateCursorPosition(true);
@@ -747,23 +728,20 @@ bool WidgetTextInput::MoveCursorHorizontal(CursorMovement movement, bool select,
 	return selection_changed;
 }
 
-bool WidgetTextInput::MoveCursorVertical(int distance, bool select, bool& out_of_bounds)
+bool WidgetTextInput::MoveCursorVertical(int distance, bool select)
 {
 	int cursor_line_index = 0, cursor_character_index = 0;
-	out_of_bounds = false;
 	GetRelativeCursorIndices(cursor_line_index, cursor_character_index);
 
 	cursor_line_index += distance;
 
 	if (cursor_line_index < 0)
 	{
-		out_of_bounds = true;
 		cursor_line_index = 0;
 		cursor_character_index = 0;
 	}
 	else if (cursor_line_index >= (int)lines.size())
 	{
-		out_of_bounds = true;
 		cursor_line_index = (int)lines.size() - 1;
 		cursor_character_index = (int)lines[cursor_line_index].editable_length;
 	}
@@ -1085,6 +1063,12 @@ Vector2f WidgetTextInput::FormatText(float height_constraint)
 	text_element->ClearLines();
 	selected_text_element->ClearLines();
 
+	// Clear the selection background geometry, and get the vertices and indices so the new geo can
+	// be generated.
+	selection_geometry.Release(true);
+	Vector<Vertex>& selection_vertices = selection_geometry.GetVertices();
+	Vector<int>& selection_indices = selection_geometry.GetIndices();
+
 	// Determine the line-height of the text element.
 	const float line_height = parent->GetLineHeight();
 	const float font_baseline = GetFontEngineInterface()->GetFontMetrics(font_handle).ascent;
@@ -1234,9 +1218,6 @@ Vector2f WidgetTextInput::FormatText(float height_constraint)
 	// Clamp the cursor to a valid range.
 	absolute_cursor_index = Math::Min(absolute_cursor_index, (int)GetValue().size());
 
-	// Clear the selection background geometry, and get the vertices and indices so the new geometry can be generated.
-	Mesh selection_mesh = selection_geometry.Release(Geometry::ReleaseMode::ClearMesh);
-
 	// Transform segments according to text alignment
 	for (auto& it : segments)
 	{
@@ -1251,7 +1232,10 @@ Vector2f WidgetTextInput::FormatText(float height_constraint)
 			const bool selection_contains_endline = (selection_begin_index + selection_length > line_begin + lines[it.line_index].editable_length);
 			const Vector2f selection_size(float(it.width + (selection_contains_endline ? endline_selection_width : 0)), line_height);
 
-			MeshUtilities::GenerateQuad(selection_mesh, it.position - Vector2f(0, font_baseline), selection_size, selection_colour);
+			selection_vertices.resize(selection_vertices.size() + 4);
+			selection_indices.resize(selection_indices.size() + 6);
+			GeometryUtilities::GenerateQuad(&selection_vertices[selection_vertices.size() - 4], &selection_indices[selection_indices.size() - 6],
+				it.position - Vector2f(0, font_baseline), selection_size, selection_colour, (int)selection_vertices.size() - 4);
 
 			selected_text_element->AddLine(it.position, it.content);
 		}
@@ -1259,13 +1243,20 @@ Vector2f WidgetTextInput::FormatText(float height_constraint)
 			text_element->AddLine(it.position, it.content);
 	}
 
-	selection_geometry = parent->GetRenderManager()->MakeGeometry(std::move(selection_mesh));
-
 	return content_area;
 }
 
 void WidgetTextInput::GenerateCursor()
 {
+	// Generates the cursor.
+	cursor_geometry.Release();
+
+	Vector<Vertex>& vertices = cursor_geometry.GetVertices();
+	vertices.resize(4);
+
+	Vector<int>& indices = cursor_geometry.GetIndices();
+	indices.resize(6);
+
 	cursor_size.x = Math::Round(ElementUtilities::GetDensityIndependentPixelRatio(text_element));
 	cursor_size.y = text_element->GetLineHeight() + 2.0f;
 
@@ -1277,9 +1268,7 @@ void WidgetTextInput::GenerateCursor()
 			color = property->Get<Colourb>();
 	}
 
-	Mesh mesh = cursor_geometry.Release(Geometry::ReleaseMode::ClearMesh);
-	MeshUtilities::GenerateQuad(mesh, Vector2f(0, 0), cursor_size, color.ToPremultiplied());
-	cursor_geometry = parent->GetRenderManager()->MakeGeometry(std::move(mesh));
+	GeometryUtilities::GenerateQuad(&vertices[0], &indices[0], Vector2f(0, 0), cursor_size, color);
 }
 
 void WidgetTextInput::ForceFormattingOnNextLayout()
@@ -1312,7 +1301,7 @@ bool WidgetTextInput::UpdateSelection(bool selecting)
 	bool selection_changed = false;
 	if (!selecting)
 	{
-		selection_anchor_index = selection_begin_index = absolute_cursor_index;
+		selection_anchor_index = absolute_cursor_index;
 		selection_changed = ClearSelection();
 	}
 	else

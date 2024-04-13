@@ -29,26 +29,16 @@
 #include "RmlUi_Platform_GLFW.h"
 #include <RmlUi/Core/Context.h>
 #include <RmlUi/Core/Input.h>
-#include <RmlUi/Core/Math.h>
+#include <RmlUi/Core/Log.h>
 #include <RmlUi/Core/StringUtilities.h>
+#include <RmlUi/Core/SystemInterface.h>
 #include <GLFW/glfw3.h>
-
-#define GLFW_HAS_EXTRA_CURSORS (GLFW_VERSION_MAJOR >= 3 && GLFW_VERSION_MINOR >= 4)
 
 SystemInterface_GLFW::SystemInterface_GLFW()
 {
 	cursor_pointer = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
 	cursor_cross = glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR);
 	cursor_text = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
-#if GLFW_HAS_EXTRA_CURSORS
-	cursor_move = glfwCreateStandardCursor(GLFW_RESIZE_ALL_CURSOR);
-	cursor_resize = glfwCreateStandardCursor(GLFW_RESIZE_NWSE_CURSOR);
-	cursor_unavailable = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
-#else
-	cursor_move = cursor_pointer;
-	cursor_resize = cursor_pointer;
-	cursor_unavailable = nullptr;
-#endif
 }
 
 SystemInterface_GLFW::~SystemInterface_GLFW()
@@ -56,11 +46,6 @@ SystemInterface_GLFW::~SystemInterface_GLFW()
 	glfwDestroyCursor(cursor_pointer);
 	glfwDestroyCursor(cursor_cross);
 	glfwDestroyCursor(cursor_text);
-#if GLFW_HAS_EXTRA_CURSORS
-	glfwDestroyCursor(cursor_move);
-	glfwDestroyCursor(cursor_resize);
-	glfwDestroyCursor(cursor_unavailable);
-#endif
 }
 
 void SystemInterface_GLFW::SetWindow(GLFWwindow* in_window)
@@ -80,19 +65,19 @@ void SystemInterface_GLFW::SetMouseCursor(const Rml::String& cursor_name)
 	if (cursor_name.empty() || cursor_name == "arrow")
 		cursor = nullptr;
 	else if (cursor_name == "move")
-		cursor = cursor_move;
+		cursor = cursor_pointer;
 	else if (cursor_name == "pointer")
 		cursor = cursor_pointer;
 	else if (cursor_name == "resize")
-		cursor = cursor_resize;
+		cursor = cursor_pointer;
 	else if (cursor_name == "cross")
 		cursor = cursor_cross;
 	else if (cursor_name == "text")
 		cursor = cursor_text;
 	else if (cursor_name == "unavailable")
-		cursor = cursor_unavailable;
+		cursor = nullptr;
 	else if (Rml::StringUtilities::StartsWith(cursor_name, "rmlui-scroll"))
-		cursor = cursor_move;
+		cursor = cursor_pointer;
 
 	if (window)
 		glfwSetCursor(window, cursor);
@@ -150,23 +135,12 @@ bool RmlGLFW::ProcessCursorEnterCallback(Rml::Context* context, int entered)
 	return result;
 }
 
-bool RmlGLFW::ProcessCursorPosCallback(Rml::Context* context, GLFWwindow* window, double xpos, double ypos, int mods)
+bool RmlGLFW::ProcessCursorPosCallback(Rml::Context* context, double xpos, double ypos, int mods)
 {
 	if (!context)
 		return true;
 
-	using Rml::Vector2i;
-	using Vector2d = Rml::Vector2<double>;
-
-	Vector2i window_size, framebuffer_size;
-	glfwGetWindowSize(window, &window_size.x, &window_size.y);
-	glfwGetFramebufferSize(window, &framebuffer_size.x, &framebuffer_size.y);
-
-	// Convert from mouse position in GLFW screen coordinates to framebuffer coordinates (pixels) used by RmlUi.
-	const Vector2d mouse_pos = Vector2d(xpos, ypos) * (Vector2d(framebuffer_size) / Vector2d(window_size));
-	const Vector2i mouse_pos_round = {int(Rml::Math::Round(mouse_pos.x)), int(Rml::Math::Round(mouse_pos.y))};
-
-	bool result = context->ProcessMouseMove(mouse_pos_round.x, mouse_pos_round.y, RmlGLFW::ConvertKeyModifiers(mods));
+	bool result = context->ProcessMouseMove(int(xpos), int(ypos), RmlGLFW::ConvertKeyModifiers(mods));
 	return result;
 }
 

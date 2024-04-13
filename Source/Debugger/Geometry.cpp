@@ -29,52 +29,50 @@
 #include "Geometry.h"
 #include "../../Include/RmlUi/Core/Context.h"
 #include "../../Include/RmlUi/Core/Core.h"
-#include "../../Include/RmlUi/Core/Geometry.h"
-#include "../../Include/RmlUi/Core/MeshUtilities.h"
-#include "../../Include/RmlUi/Core/RenderManager.h"
+#include "../../Include/RmlUi/Core/GeometryUtilities.h"
+#include "../../Include/RmlUi/Core/RenderInterface.h"
 
 namespace Rml {
 namespace Debugger {
 
-static Context* g_context = nullptr;
-static RenderManager* g_render_manager = nullptr;
+static Context* context;
 
 Geometry::Geometry() {}
 
-void Geometry::SetContext(Context* context)
+void Geometry::SetContext(Context* _context)
 {
-	g_context = context;
-	g_render_manager = context ? &context->GetRenderManager() : nullptr;
+	context = _context;
 }
 
 void Geometry::RenderOutline(const Vector2f origin, const Vector2f dimensions, const Colourb colour, float width)
 {
-	if (!g_context || !g_render_manager)
+	RenderInterface* render_interface = ::Rml::GetRenderInterface();
+	if (!context || !render_interface)
 		return;
 
-	Mesh mesh;
-	mesh.vertices.reserve(4 * 4);
-	mesh.indices.reserve(6 * 4);
+	Vertex vertices[4 * 4];
+	int indices[6 * 4];
 
-	ColourbPremultiplied colour_pre = colour.ToPremultiplied();
+	GeometryUtilities::GenerateQuad(vertices + 0, indices + 0, Vector2f(0, 0), Vector2f(dimensions.x, width), colour, 0);
+	GeometryUtilities::GenerateQuad(vertices + 4, indices + 6, Vector2f(0, dimensions.y - width), Vector2f(dimensions.x, width), colour, 4);
+	GeometryUtilities::GenerateQuad(vertices + 8, indices + 12, Vector2f(0, 0), Vector2f(width, dimensions.y), colour, 8);
+	GeometryUtilities::GenerateQuad(vertices + 12, indices + 18, Vector2f(dimensions.x - width, 0), Vector2f(width, dimensions.y), colour, 12);
 
-	MeshUtilities::GenerateQuad(mesh, Vector2f(0, 0), Vector2f(dimensions.x, width), colour_pre);
-	MeshUtilities::GenerateQuad(mesh, Vector2f(0, dimensions.y - width), Vector2f(dimensions.x, width), colour_pre);
-	MeshUtilities::GenerateQuad(mesh, Vector2f(0, 0), Vector2f(width, dimensions.y), colour_pre);
-	MeshUtilities::GenerateQuad(mesh, Vector2f(dimensions.x - width, 0), Vector2f(width, dimensions.y), colour_pre);
-
-	g_render_manager->MakeGeometry(std::move(mesh)).Render(origin);
+	render_interface->RenderGeometry(vertices, 4 * 4, indices, 6 * 4, 0, origin);
 }
 
 void Geometry::RenderBox(const Vector2f origin, const Vector2f dimensions, const Colourb colour)
 {
-	if (!g_context || !g_render_manager)
+	RenderInterface* render_interface = ::Rml::GetRenderInterface();
+	if (!context || !render_interface)
 		return;
 
-	Mesh mesh;
-	MeshUtilities::GenerateQuad(mesh, Vector2f(0, 0), Vector2f(dimensions.x, dimensions.y), colour.ToPremultiplied());
+	Vertex vertices[4];
+	int indices[6];
 
-	g_render_manager->MakeGeometry(std::move(mesh)).Render(origin);
+	GeometryUtilities::GenerateQuad(vertices, indices, Vector2f(0, 0), Vector2f(dimensions.x, dimensions.y), colour, 0);
+
+	render_interface->RenderGeometry(vertices, 4, indices, 6, 0, origin);
 }
 
 void Geometry::RenderBox(const Vector2f origin, const Vector2f dimensions, const Vector2f hole_origin, const Vector2f hole_dimensions,

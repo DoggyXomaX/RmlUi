@@ -30,12 +30,12 @@
 #include "FontEngineBitmap.h"
 #include <RmlUi/Core.h>
 
-void FontEngineInterfaceBitmap::Initialize()
+FontEngineInterfaceBitmap::FontEngineInterfaceBitmap()
 {
 	FontProviderBitmap::Initialise();
 }
 
-void FontEngineInterfaceBitmap::Shutdown()
+FontEngineInterfaceBitmap::~FontEngineInterfaceBitmap()
 {
 	FontProviderBitmap::Shutdown();
 }
@@ -45,8 +45,8 @@ bool FontEngineInterfaceBitmap::LoadFontFace(const String& file_name, bool /*fal
 	return FontProviderBitmap::LoadFontFace(file_name);
 }
 
-bool FontEngineInterfaceBitmap::LoadFontFace(Span<const byte> /*data*/, const String& font_family, FontStyle /*style*/, FontWeight /*weight*/,
-	bool /*fallback_face*/)
+bool FontEngineInterfaceBitmap::LoadFontFace(const byte* /*data*/, int /*data_size*/, const String& font_family, FontStyle /*style*/,
+	FontWeight /*weight*/, bool /*fallback_face*/)
 {
 	// We return 'true' here to allow the debugger to continue loading, but we will use our own fonts when it asks for a handle.
 	// The debugger might look a bit off with our own fonts, but hey it works.
@@ -74,19 +74,17 @@ const FontMetrics& FontEngineInterfaceBitmap::GetFontMetrics(FontFaceHandle hand
 	return handle_bitmap->GetMetrics();
 }
 
-int FontEngineInterfaceBitmap::GetStringWidth(FontFaceHandle handle, const String& string, const TextShapingContext& /*text_shaping_context*/,
-	Character prior_character)
+int FontEngineInterfaceBitmap::GetStringWidth(FontFaceHandle handle, const String& string, float /*letter_spacing*/, Character prior_character)
 {
 	auto handle_bitmap = reinterpret_cast<FontFaceBitmap*>(handle);
 	return handle_bitmap->GetStringWidth(string, prior_character);
 }
 
-int FontEngineInterfaceBitmap::GenerateString(RenderManager& render_manager, FontFaceHandle handle, FontEffectsHandle /*font_effects_handle*/,
-	const String& string, const Vector2f& position, ColourbPremultiplied colour, float /*opacity*/,
-	const TextShapingContext& /*text_shaping_context*/, TexturedMeshList& mesh_list)
+int FontEngineInterfaceBitmap::GenerateString(FontFaceHandle handle, FontEffectsHandle /*font_effects_handle*/, const String& string,
+	const Vector2f& position, const Colourb& colour, float /*opacity*/, float /*letter_spacing*/, GeometryList& geometry)
 {
 	auto handle_bitmap = reinterpret_cast<FontFaceBitmap*>(handle);
-	return handle_bitmap->GenerateString(render_manager, string, position, colour, mesh_list);
+	return handle_bitmap->GenerateString(string, position, colour, geometry);
 }
 
 int FontEngineInterfaceBitmap::GetVersion(FontFaceHandle /*handle*/)

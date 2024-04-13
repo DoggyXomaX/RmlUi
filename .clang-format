@@ -40,7 +40,6 @@ Language: Cpp
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: Inner
 PointerAlignment: Left
-QualifierAlignment: Left
 ReflowComments: true
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
@@ -64,4 +63,3 @@ StatementMacros:
   - RMLUI_RTTI_DefineWithParent
 TabWidth: 4
 UseTab: AlignWithSpaces
-WhitespaceSensitiveMacros: ['RMLUI_STRINGIFY']

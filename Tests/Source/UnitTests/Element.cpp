@@ -258,21 +258,21 @@ TEST_CASE("Element")
 	SUBCASE("CloneManual")
 	{
 		Element* element = document->GetFirstChild();
-		REQUIRE(element->GetProperty<String>("background-color") == "#ff0000");
-		CHECK(element->Clone()->GetProperty<String>("background-color") == "#ff0000");
+		REQUIRE(element->GetProperty<String>("background-color") == "255, 0, 0, 255");
+		CHECK(element->Clone()->GetProperty<String>("background-color") == "255, 0, 0, 255");
 
 		element->SetProperty("background-color", "#0f0");
-		CHECK(element->Clone()->GetProperty<String>("background-color") == "#00ff00");
+		CHECK(element->Clone()->GetProperty<String>("background-color") == "0, 255, 0, 255");
 
 		element->RemoveProperty("background-color");
 		Element* clone = document->AppendChild(element->Clone());
 		context->Update();
-		CHECK(clone->GetProperty<String>("background-color") == "#ffffff");
+		CHECK(clone->GetProperty<String>("background-color") == "255, 255, 255, 255");
 
 		element->SetClass("blue", true);
 		clone = document->AppendChild(element->Clone());
 		context->Update();
-		CHECK(clone->GetProperty<String>("background-color") == "#0000ff");
+		CHECK(clone->GetProperty<String>("background-color") == "0, 0, 255, 255");
 	}
 
 	SUBCASE("SetInnerRML")

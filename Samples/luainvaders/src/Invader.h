@@ -59,7 +59,7 @@ public:
 	virtual void Update(double t);
 
 	/// Render the invader
-	void Render(Rml::RenderManager& render_manager, float dp_ratio, Rml::Texture texture);
+	void Render(float dp_ratio, Rml::TextureHandle texture);
 
 	/// Update the invaders animation
 	void UpdateAnimation();

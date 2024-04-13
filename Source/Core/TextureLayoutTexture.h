@@ -35,6 +35,7 @@
 namespace Rml {
 
 class TextureLayout;
+class TextureResource;
 
 /**
     A texture layout texture is a single rectangular area which sub-rectangles are placed on within
@@ -62,7 +63,7 @@ public:
 
 	/// Allocates the texture.
 	/// @return The allocated texture data.
-	Vector<byte> AllocateTexture();
+	UniquePtr<byte[]> AllocateTexture();
 
 private:
 	using RowList = Vector<TextureLayoutRow>;

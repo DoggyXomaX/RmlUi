@@ -48,12 +48,8 @@
 
 	text-l: 162px 192px 14px 31px;
 	text-c: 176px 192px 1px 31px;
-	text-focus-l: 162px 230px 14px 31px;
-	text-focus-c: 176px 230px 1px 31px;
 	textarea: 162px 193px 145px 31px;
 	textarea-inner: 173px 206px 127px 10px;
-	textarea-focus: 162px 231px 145px 31px;
-	textarea-focus-inner: 173px 244px 127px 10px;
 
 	selectbox-tl: 281px 275px 11px 9px;
 	selectbox-t:  292px 275px 1px 9px;
@@ -117,11 +113,8 @@
 	sliderarrowinc-hover: 28px 177px 27px 24px;
 	sliderarrowinc-active: 28px 202px 27px 24px;
 
-	range-track:             219px 194px  3px 32px;
-	range-track-inner:       220px 204px  1px 14px;
-	range-track-focus:       219px 232px  3px 32px;
-	range-track-focus-inner: 220px 242px  1px 14px;
-
+	range-track:       219px 194px  3px 32px;
+	range-track-inner: 220px 204px  1px 14px;
 	range-bar:         127px 191px 34px 32px;
 	range-dec:           3px 232px 17px 17px;
 	range-dec-hover:    21px 232px 17px 17px;
@@ -147,7 +140,6 @@ body
 	font-style: normal;
 	font-size: 15dp;
 	color: white;
-	nav: auto;
 }
 
 body.window
@@ -260,9 +252,7 @@ input.submit
 	margin-left: 0;
 }
 
-input, button, select {
-	nav: auto;
-}
+
 
 button,
 input.submit
@@ -286,8 +276,8 @@ input.submit:focus
 	font-effect: blur(3dp #fff);
 }
 
-button:hover, button:focus-visible,
-input.submit:hover, input.submit:focus-visible
+button:hover,
+input.submit:hover
 {
 	decorator: image(button-hover);
 }
@@ -312,11 +302,6 @@ input.text, input.password
 	padding: 11dp 10dp 0;
 	decorator: tiled-horizontal( text-l, text-c, auto ); /* Right becomes mirrored left */
 	cursor: text;
-	text-align: left;
-}
-input.text:focus-visible, input.password:focus-visible
-{
-	decorator: tiled-horizontal( text-focus-l, text-focus-c, auto );
 }
 
 textarea
@@ -324,11 +309,6 @@ textarea
 	padding: 14dp 12dp 10dp;
 	decorator: ninepatch( textarea, textarea-inner, 1.0 );
 	cursor: text;
-	text-align: left;
-}
-textarea:focus-visible
-{
-	decorator: ninepatch( textarea-focus, textarea-focus-inner, 1.0 );
 }
 
 input.text,
@@ -354,11 +334,10 @@ table input.text
 	background-color: white;
 
 	font-size: 15dp;
-}
-table input.text, table input.text:focus-visible
-{
+
 	decorator: none;
 }
+
 
 
 select
@@ -375,10 +354,7 @@ select selectvalue
 	height: 25dp;
 	padding: 12dp 10dp 0dp 10dp;
 
-	decorator: image( selectvalue );
-}
-select:focus-visible selectvalue {
-	decorator: image( selectvalue-hover );
+	decorator: image( selectvalue  );
 }
 
 select selectarrow
@@ -389,7 +365,7 @@ select selectarrow
 	decorator: image( selectarrow );
 }
 
-select:hover selectarrow, select:focus-visible selectarrow
+select:hover selectarrow
 {
 	decorator: image( selectarrow-hover );
 }
@@ -456,7 +432,7 @@ input.radio
 	decorator: image(radio);
 }
 
-input.radio:hover, input.radio:focus-visible
+input.radio:hover
 {
 	decorator: image(radio-hover);
 }
@@ -471,7 +447,7 @@ input.radio:checked
 	decorator: image(radio-checked);
 }
 
-input.radio:checked:hover, input.radio:checked:focus-visible
+input.radio:checked:hover
 {
 	decorator: image(radio-checked-hover);
 }
@@ -486,7 +462,7 @@ input.checkbox
 	decorator: image(checkbox);
 }
 
-input.checkbox:hover, input.checkbox:focus-visible
+input.checkbox:hover
 {
 	decorator: image(checkbox-hover);
 }
@@ -501,7 +477,7 @@ input.checkbox:checked
 	decorator: image(checkbox-checked);
 }
 
-input.checkbox:checked:hover, input.checkbox:checked:focus-visible
+input.checkbox:checked:hover
 {
 	decorator: image(checkbox-checked-hover);
 }
@@ -521,9 +497,6 @@ input.range slidertrack {
 	height: 22dp;
 	image-color: #ecc;
 	decorator: ninepatch( range-track, range-track-inner, 1.0 );
-}
-input.range:focus-visible slidertrack {
-	decorator: ninepatch( range-track-focus, range-track-focus-inner, 1.0 );
 }
 input.range sliderbar {
 	margin-left: -8dp;

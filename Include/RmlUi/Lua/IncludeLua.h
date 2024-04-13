@@ -29,17 +29,11 @@
 #ifndef RMLUI_LUA_INCLUDELUA_H
 #define RMLUI_LUA_INCLUDELUA_H
 
-#ifndef RMLUI_LUA_COMPILED_AS_CXX
-extern "C" {
-#endif
-
 // The standard Lua headers
+extern "C" {
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-
-#ifndef RMLUI_LUA_COMPILED_AS_CXX
 }
-#endif
 
 #endif

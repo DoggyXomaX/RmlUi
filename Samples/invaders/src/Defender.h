@@ -47,7 +47,7 @@ public:
 	/// Update the defender state.
 	void Update(double t);
 	/// Render the defender.
-	void Render(Rml::RenderManager& render_manager, float dp_ratio, Rml::Texture texture);
+	void Render(float dp_ratio, Rml::TextureHandle texture);
 
 	/// Move the defender left.
 	void StartMove(float direction);

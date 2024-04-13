@@ -17,7 +17,7 @@
 			}
 		</style>
 	</head>
-	<body template="window" onload="pause" onunload="unpause" onkeyup="onescape close">
+	<body template="window" onload="pause" onunload="unpause">
 		<br />
 		<p>Are you sure you want to end this game?</p>
 		<button onclick="goto high_score; close game_window" autofocus>Yes</button>

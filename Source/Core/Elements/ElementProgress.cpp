@@ -31,8 +31,8 @@
 #include "../../../Include/RmlUi/Core/ElementDocument.h"
 #include "../../../Include/RmlUi/Core/ElementUtilities.h"
 #include "../../../Include/RmlUi/Core/Factory.h"
+#include "../../../Include/RmlUi/Core/GeometryUtilities.h"
 #include "../../../Include/RmlUi/Core/Math.h"
-#include "../../../Include/RmlUi/Core/MeshUtilities.h"
 #include "../../../Include/RmlUi/Core/PropertyIdSet.h"
 #include "../../../Include/RmlUi/Core/StyleSheet.h"
 #include "../../../Include/RmlUi/Core/URL.h"
@@ -92,7 +92,7 @@ void ElementProgress::OnRender()
 		GenerateGeometry();
 
 	// Render the geometry at the fill element's content region.
-	geometry.Render(fill->GetAbsoluteOffset(), texture);
+	geometry.Render(fill->GetAbsoluteOffset());
 }
 
 void ElementProgress::OnAttributeChange(const ElementAttributes& changed_attributes)
@@ -179,8 +179,6 @@ void ElementProgress::OnResize()
 
 void ElementProgress::GenerateGeometry()
 {
-	geometry_dirty = false;
-
 	// Warn the user when using the old approach of adding the 'fill-image' property to the 'fill' element.
 	if (fill->GetLocalProperty(PropertyId::FillImage))
 		Log::Message(Log::LT_WARNING,
@@ -220,7 +218,8 @@ void ElementProgress::GenerateGeometry()
 		fill->SetOffset(offset, this);
 	}
 
-	Mesh mesh = geometry.Release(Geometry::ReleaseMode::ClearMesh);
+	geometry.Release(true);
+	geometry_dirty = false;
 
 	// If we don't have a fill texture, then there is no need to generate manual geometry, and we are done here.
 	// Instead, users can style the fill element eg. by decorators.
@@ -228,8 +227,8 @@ void ElementProgress::GenerateGeometry()
 		return;
 
 	// Otherwise, the 'fill-image' property is set, let's generate its geometry.
-	Vector<Vertex>& vertices = mesh.vertices;
-	Vector<int>& indices = mesh.indices;
+	auto& vertices = geometry.GetVertices();
+	auto& indices = geometry.GetIndices();
 
 	Vector2f texcoords[2];
 	if (rect_set)
@@ -244,8 +243,13 @@ void ElementProgress::GenerateGeometry()
 		texcoords[1] = Vector2f(1, 1);
 	}
 
-	const ComputedValues& computed = GetComputedValues();
-	const ColourbPremultiplied quad_colour = computed.image_color().ToPremultiplied(computed.opacity());
+	Colourb quad_colour;
+	{
+		const ComputedValues& computed = GetComputedValues();
+		const float opacity = computed.opacity();
+		quad_colour = computed.image_color();
+		quad_colour.alpha = (byte)(opacity * (float)quad_colour.alpha);
+	}
 
 	switch (direction)
 	{
@@ -330,10 +334,10 @@ void ElementProgress::GenerateGeometry()
 
 	if (!is_circular)
 	{
-		MeshUtilities::GenerateQuad(mesh, Vector2f(0), render_size, quad_colour, texcoords[0], texcoords[1]);
+		vertices.resize(4);
+		indices.resize(6);
+		GeometryUtilities::GenerateQuad(&vertices[0], &indices[0], Vector2f(0), render_size, quad_colour, texcoords[0], texcoords[1]);
 	}
-
-	geometry = GetRenderManager()->MakeGeometry(std::move(mesh));
 }
 
 bool ElementProgress::LoadTexture()
@@ -345,10 +349,6 @@ bool ElementProgress::LoadTexture()
 
 	if (const Property* property = GetLocalProperty(PropertyId::FillImage))
 		name = property->Get<String>();
-
-	RenderManager* render_manager = GetRenderManager();
-	if (!render_manager)
-		return false;
 
 	ElementDocument* document = GetOwnerDocument();
 
@@ -363,7 +363,7 @@ bool ElementProgress::LoadTexture()
 			{
 				rect = sprite->rectangle;
 				rect_set = true;
-				texture = sprite->sprite_sheet->texture_source.GetTexture(*render_manager);
+				texture = sprite->sprite_sheet->texture;
 				texture_set = true;
 			}
 		}
@@ -373,7 +373,7 @@ bool ElementProgress::LoadTexture()
 		{
 			URL source_url;
 			source_url.SetURL(document->GetSourceURL());
-			texture = render_manager->LoadTexture(name, source_url.GetPath());
+			texture.Set(name, source_url.GetPath());
 			texture_set = true;
 		}
 	}
@@ -383,6 +383,9 @@ bool ElementProgress::LoadTexture()
 		texture = {};
 		rect = {};
 	}
+
+	// Set the texture onto our geometry object.
+	geometry.SetTexture(&texture);
 
 	return true;
 }

@@ -78,14 +78,11 @@ void ElementTabSet::RemoveTab(int tab_index)
 		return;
 
 	Element* panels = GetChildByTag("panels");
-	if (panels->GetNumChildren() > tab_index)
+	Element* tabs = GetChildByTag("tabs");
+
+	if (panels->GetNumChildren() > tab_index && tabs->GetNumChildren() > tab_index)
 	{
 		panels->RemoveChild(panels->GetChild(tab_index));
-	}
-
-	Element* tabs = GetChildByTag("tabs");
-	if (tabs->GetNumChildren() > tab_index)
-	{
 		tabs->RemoveChild(tabs->GetChild(tab_index));
 	}
 }

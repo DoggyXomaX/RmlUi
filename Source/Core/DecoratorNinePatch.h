@@ -30,6 +30,7 @@
 #define RMLUI_CORE_DECORATORNINEPATCH_H
 
 #include "../../Include/RmlUi/Core/Decorator.h"
+#include "../../Include/RmlUi/Core/DecoratorInstancer.h"
 #include "../../Include/RmlUi/Core/ID.h"
 #include "../../Include/RmlUi/Core/Spritesheet.h"
 
@@ -40,10 +41,10 @@ public:
 	DecoratorNinePatch();
 	virtual ~DecoratorNinePatch();
 
-	bool Initialise(const Rectanglef& rect_outer, const Rectanglef& rect_inner, const Array<NumericValue, 4>* _edges, Texture texture,
+	bool Initialise(const Rectanglef& rect_outer, const Rectanglef& rect_inner, const Array<NumericValue, 4>* _edges, const Texture& texture,
 		float display_scale);
 
-	DecoratorDataHandle GenerateElementData(Element* element, BoxArea paint_area) const override;
+	DecoratorDataHandle GenerateElementData(Element* element) const override;
 	void ReleaseElementData(DecoratorDataHandle element_data) const override;
 
 	void RenderElement(Element* element, DecoratorDataHandle element_data) const override;

@@ -42,25 +42,18 @@ public:
 
 	// -- Inherited from Rml::RenderInterface --
 
-	Rml::CompiledGeometryHandle CompileGeometry(Rml::Span<const Rml::Vertex> vertices, Rml::Span<const int> indices) override;
-	void ReleaseGeometry(Rml::CompiledGeometryHandle geometry) override;
-	void RenderGeometry(Rml::CompiledGeometryHandle handle, Rml::Vector2f translation, Rml::TextureHandle texture) override;
-
-	Rml::TextureHandle LoadTexture(Rml::Vector2i& texture_dimensions, const Rml::String& source) override;
-	Rml::TextureHandle GenerateTexture(Rml::Span<const Rml::byte> source, Rml::Vector2i source_dimensions) override;
-	void ReleaseTexture(Rml::TextureHandle texture_handle) override;
+	void RenderGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture,
+		const Rml::Vector2f& translation) override;
 
 	void EnableScissorRegion(bool enable) override;
-	void SetScissorRegion(Rml::Rectanglei region) override;
+	void SetScissorRegion(int x, int y, int width, int height) override;
+
+	bool LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source) override;
+	bool GenerateTexture(Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions) override;
+	void ReleaseTexture(Rml::TextureHandle texture_handle) override;
 
 private:
-	struct GeometryView {
-		Rml::Span<const Rml::Vertex> vertices;
-		Rml::Span<const int> indices;
-	};
-
 	SDL_Renderer* renderer;
-	SDL_BlendMode blend_mode = {};
 	SDL_Rect rect_scissor = {};
 	bool scissor_region_enabled = false;
 };

@@ -59,7 +59,6 @@ enum class ShorthandId : uint8_t {
 	TransformOrigin,
 	Flex,
 	FlexFlow,
-	Nav,
 
 	NumDefinedIds,
 	FirstCustomId = NumDefinedIds,
@@ -156,12 +155,7 @@ enum class PropertyId : uint8_t {
 	Focus,
 
 	Decorator,
-	MaskImage,
 	FontEffect,
-
-	Filter,
-	BackdropFilter,
-	BoxShadow,
 
 	FillImage,
 
@@ -174,14 +168,6 @@ enum class PropertyId : uint8_t {
 	FlexShrink,
 	FlexWrap,
 	JustifyContent,
-
-	NavUp,
-	NavRight,
-	NavDown,
-	NavLeft,
-
-	RmlUi_Language,
-	RmlUi_Direction,
 
 	NumDefinedIds,
 	FirstCustomId = NumDefinedIds,

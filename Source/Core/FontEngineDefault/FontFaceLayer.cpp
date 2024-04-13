@@ -27,10 +27,10 @@
  */
 
 #include "FontFaceLayer.h"
-#include "../../../Include/RmlUi/Core/RenderManager.h"
+#include "../../../Include/RmlUi/Core/Log.h"
+#include "../../../Include/RmlUi/Core/RenderInterface.h"
 #include "FontFaceHandleDefault.h"
 #include <string.h>
-#include <type_traits>
 
 namespace Rml {
 
@@ -51,8 +51,7 @@ bool FontFaceLayer::Generate(const FontFaceHandleDefault* handle, const FontFace
 		// Right now we re-generate the whole thing, including textures.
 		texture_layout = TextureLayout{};
 		character_boxes.clear();
-		textures_owned.clear();
-		textures_ptr = &textures_owned;
+		textures.clear();
 	}
 
 	const FontGlyphMap& glyphs = handle->GetGlyphs();
@@ -63,8 +62,9 @@ bool FontFaceLayer::Generate(const FontFaceHandleDefault* handle, const FontFace
 		// Clone the geometry and textures from the clone layer.
 		character_boxes = clone->character_boxes;
 
-		// Point our textures to the cloned layer's textures.
-		textures_ptr = clone->textures_ptr;
+		// Copy the cloned layer's textures.
+		for (size_t i = 0; i < clone->textures.size(); ++i)
+			textures.push_back(clone->textures[i]);
 
 		// Request the effect (if we have one) and adjust the origins as appropriate.
 		if (effect && !clone_glyph_origins)
@@ -160,28 +160,26 @@ bool FontFaceLayer::Generate(const FontFaceHandleDefault* handle, const FontFace
 		{
 			const int texture_id = i;
 
-			CallbackTextureFunction texture_callback = [handle, effect_ptr, texture_id, handle_version](
-														   const CallbackTextureInterface& texture_interface) -> bool {
-				Vector2i dimensions;
-				Vector<byte> data;
-				if (!handle->GenerateLayerTexture(data, dimensions, effect_ptr, texture_id, handle_version) || data.empty())
+			TextureCallback texture_callback = [handle, effect_ptr, texture_id, handle_version](RenderInterface* render_interface,
+												   const String& /*name*/, TextureHandle& out_texture_handle, Vector2i& out_dimensions) -> bool {
+				UniquePtr<const byte[]> data;
+				if (!handle->GenerateLayerTexture(data, out_dimensions, effect_ptr, texture_id, handle_version) || !data)
 					return false;
-				if (!texture_interface.GenerateTexture(data, dimensions))
+				if (!render_interface->GenerateTexture(out_texture_handle, data.get(), out_dimensions))
 					return false;
 				return true;
 			};
 
-			static_assert(std::is_nothrow_move_constructible<CallbackTextureSource>::value,
-				"CallbackTextureSource must be nothrow move constructible so that it can be placed in the vector below.");
-
-			textures_owned.emplace_back(std::move(texture_callback));
+			Texture texture;
+			texture.Set("font-face-layer", texture_callback);
+			textures.push_back(texture);
 		}
 	}
 
 	return true;
 }
 
-bool FontFaceLayer::GenerateTexture(Vector<byte>& texture_data, Vector2i& texture_dimensions, int texture_id, const FontGlyphMap& glyphs)
+bool FontFaceLayer::GenerateTexture(UniquePtr<const byte[]>& texture_data, Vector2i& texture_dimensions, int texture_id, const FontGlyphMap& glyphs)
 {
 	if (texture_id < 0 || texture_id > texture_layout.GetNumTextures())
 		return false;
@@ -222,10 +220,8 @@ bool FontFaceLayer::GenerateTexture(Vector<byte>& texture_data, Vector2i& textur
 					{
 					case ColorFormat::A8:
 					{
-						// We use premultiplied alpha, so copy the alpha into all four channels.
 						for (int k = 0; k < num_bytes_per_line; ++k)
-							for (int c = 0; c < 4; ++c)
-								destination[k * 4 + c] = source[k];
+							destination[k * 4 + 3] = source[k];
 					}
 					break;
 					case ColorFormat::RGBA8:
@@ -254,22 +250,22 @@ const FontEffect* FontFaceLayer::GetFontEffect() const
 	return effect.get();
 }
 
-Texture FontFaceLayer::GetTexture(RenderManager& render_manager, int index)
+const Texture* FontFaceLayer::GetTexture(int index)
 {
 	RMLUI_ASSERT(index >= 0);
 	RMLUI_ASSERT(index < GetNumTextures());
 
-	return (*textures_ptr)[index].GetTexture(render_manager);
+	return &(textures[index]);
 }
 
 int FontFaceLayer::GetNumTextures() const
 {
-	return (int)textures_ptr->size();
+	return (int)textures.size();
 }
 
-ColourbPremultiplied FontFaceLayer::GetColour(float opacity) const
+Colourb FontFaceLayer::GetColour() const
 {
-	return colour.ToPremultiplied(opacity);
+	return colour;
 }
 
 } // namespace Rml

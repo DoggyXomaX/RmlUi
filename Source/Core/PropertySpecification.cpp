@@ -138,17 +138,11 @@ ShorthandId PropertySpecification::RegisterShorthand(const String& shorthand_nam
 	{
 		ShorthandItem item;
 		bool optional = false;
-		bool repeats = false;
 		String name = raw_name;
 
 		if (!raw_name.empty() && raw_name.back() == '?')
 		{
 			optional = true;
-			name.pop_back();
-		}
-		if (!raw_name.empty() && raw_name.back() == '#')
-		{
-			repeats = true;
 			name.pop_back();
 		}
 
@@ -157,7 +151,7 @@ ShorthandId PropertySpecification::RegisterShorthand(const String& shorthand_nam
 		{
 			// We have a valid property
 			if (const PropertyDefinition* property = GetProperty(property_id))
-				item = ShorthandItem(property_id, property, optional, repeats);
+				item = ShorthandItem(property_id, property, optional);
 		}
 		else
 		{
@@ -168,7 +162,7 @@ ShorthandId PropertySpecification::RegisterShorthand(const String& shorthand_nam
 			if (shorthand_id != ShorthandId::Invalid && (type == ShorthandType::RecursiveRepeat || type == ShorthandType::RecursiveCommaSeparated))
 			{
 				if (const ShorthandDefinition* shorthand = GetShorthand(shorthand_id))
-					item = ShorthandItem(shorthand_id, shorthand, optional, repeats);
+					item = ShorthandItem(shorthand_id, shorthand, optional);
 			}
 		}
 
@@ -248,7 +242,7 @@ bool PropertySpecification::ParsePropertyDeclaration(PropertyDictionary& diction
 		return false;
 
 	StringList property_values;
-	if (!ParsePropertyValues(property_values, property_value, SplitOption::None) || property_values.empty())
+	if (!ParsePropertyValues(property_values, property_value, false) || property_values.size() == 0)
 		return false;
 
 	Property new_property;
@@ -261,22 +255,20 @@ bool PropertySpecification::ParsePropertyDeclaration(PropertyDictionary& diction
 
 bool PropertySpecification::ParseShorthandDeclaration(PropertyDictionary& dictionary, ShorthandId shorthand_id, const String& property_value) const
 {
+	StringList property_values;
+	if (!ParsePropertyValues(property_values, property_value, true) || property_values.size() == 0)
+		return false;
+
+	// Parse as a shorthand.
 	const ShorthandDefinition* shorthand_definition = GetShorthand(shorthand_id);
 	if (!shorthand_definition)
 		return false;
 
-	const SplitOption split_option =
-		(shorthand_definition->type == ShorthandType::RecursiveCommaSeparated ? SplitOption::Comma : SplitOption::Whitespace);
-
-	StringList property_values;
-	if (!ParsePropertyValues(property_values, property_value, split_option) || property_values.empty())
-		return false;
-
 	// Handle the special behavior of the flex shorthand first, otherwise it acts like 'FallThrough'.
-	if (shorthand_definition->type == ShorthandType::Flex && !property_values.empty())
+	if (shorthand_definition->type == ShorthandType::Flex)
 	{
 		RMLUI_ASSERT(shorthand_definition->items.size() == 3);
-		if (property_values[0] == "none")
+		if (!property_values.empty() && property_values[0] == "none")
 		{
 			property_values = {"0", "0", "auto"};
 		}
@@ -298,7 +290,8 @@ bool PropertySpecification::ParseShorthandDeclaration(PropertyDictionary& dictio
 		}
 	}
 
-	// If this definition is a 'box'-style shorthand (x-top x-right x-bottom x-left) that needs replication.
+	// If this definition is a 'box'-style shorthand (x-top, x-right, x-bottom, x-left, etc) and there are fewer
+	// than four values
 	if (shorthand_definition->type == ShorthandType::Box && property_values.size() < 4)
 	{
 		// This array tells which property index each side is parsed from
@@ -353,56 +346,41 @@ bool PropertySpecification::ParseShorthandDeclaration(PropertyDictionary& dictio
 	}
 	else if (shorthand_definition->type == ShorthandType::RecursiveCommaSeparated)
 	{
+		StringList subvalues;
+		StringUtilities::ExpandString(subvalues, property_value);
+
 		size_t num_optional = 0;
 		for (auto& item : shorthand_definition->items)
 			if (item.optional)
 				num_optional += 1;
 
-		if (property_values.size() + num_optional < shorthand_definition->items.size())
+		if (subvalues.size() + num_optional < shorthand_definition->items.size())
 		{
 			// Not enough subvalues declared.
 			return false;
 		}
 
 		size_t subvalue_i = 0;
-		String temp_subvalue;
-		for (size_t i = 0; i < shorthand_definition->items.size() && subvalue_i < property_values.size(); i++)
+		for (size_t i = 0; i < shorthand_definition->items.size() && subvalue_i < subvalues.size(); i++)
 		{
 			bool result = false;
 
-			const String* subvalue = &property_values[subvalue_i];
-
 			const ShorthandItem& item = shorthand_definition->items[i];
-			if (item.repeats)
-			{
-				property_values.erase(property_values.begin(), property_values.begin() + subvalue_i);
-				temp_subvalue.clear();
-				StringUtilities::JoinString(temp_subvalue, property_values);
-				subvalue = &temp_subvalue;
-			}
-
 			if (item.type == ShorthandItemType::Property)
-				result = ParsePropertyDeclaration(dictionary, item.property_id, *subvalue);
+				result = ParsePropertyDeclaration(dictionary, item.property_id, subvalues[subvalue_i]);
 			else if (item.type == ShorthandItemType::Shorthand)
-				result = ParseShorthandDeclaration(dictionary, item.shorthand_id, *subvalue);
+				result = ParseShorthandDeclaration(dictionary, item.shorthand_id, subvalues[subvalue_i]);
 
 			if (result)
 				subvalue_i += 1;
-			else if (item.repeats || !item.optional)
+			else if (!item.optional)
 				return false;
-
-			if (item.repeats)
-				break;
 		}
 	}
 	else
 	{
 		RMLUI_ASSERT(shorthand_definition->type == ShorthandType::Box || shorthand_definition->type == ShorthandType::FallThrough ||
 			shorthand_definition->type == ShorthandType::Replicate || shorthand_definition->type == ShorthandType::Flex);
-
-		// Abort over-specified shorthand values.
-		if (property_values.size() > shorthand_definition->items.size())
-			return false;
 
 		size_t value_index = 0;
 		size_t property_index = 0;
@@ -429,11 +407,6 @@ bool PropertySpecification::ParseShorthandDeclaration(PropertyDictionary& dictio
 			if (shorthand_definition->type != ShorthandType::Replicate || value_index < property_values.size() - 1)
 				value_index++;
 		}
-
-		// Abort if we still have values left to parse but no more properties to pass them to.
-		if (shorthand_definition->type != ShorthandType::Replicate && value_index < property_values.size() &&
-			property_index >= shorthand_definition->items.size())
-			return false;
 	}
 
 	return true;
@@ -475,32 +448,24 @@ String PropertySpecification::PropertiesToString(const PropertyDictionary& dicti
 	return result;
 }
 
-bool PropertySpecification::ParsePropertyValues(StringList& values_list, const String& values, const SplitOption split_option) const
+bool PropertySpecification::ParsePropertyValues(StringList& values_list, const String& values, bool split_values) const
 {
-	const bool split_values = (split_option != SplitOption::None);
-	const bool split_by_comma = (split_option == SplitOption::Comma);
-	const bool split_by_whitespace = (split_option == SplitOption::Whitespace);
-
 	String value;
 
-	auto SubmitValue = [&]() {
-		value = StringUtilities::StripWhitespace(value);
-		if (value.size() > 0)
-		{
-			values_list.push_back(value);
-			value.clear();
-		}
-	};
-
-	enum ParseState { VALUE, VALUE_PARENTHESIS, VALUE_QUOTE, VALUE_QUOTE_ESCAPE_NEXT };
+	enum ParseState { VALUE, VALUE_PARENTHESIS, VALUE_QUOTE };
 	ParseState state = VALUE;
 	int open_parentheses = 0;
+
 	size_t character_index = 0;
+	bool escape_next = false;
 
 	while (character_index < values.size())
 	{
 		const char character = values[character_index];
 		character_index++;
+
+		const bool escape_character = escape_next;
+		escape_next = false;
 
 		switch (state)
 		{
@@ -515,20 +480,37 @@ bool PropertySpecification::ParsePropertyValues(StringList& values_list, const S
 					value.clear();
 				}
 			}
-			else if (split_by_comma ? (character == ',') : StringUtilities::IsWhitespace(character))
+			else if (StringUtilities::IsWhitespace(character))
 			{
 				if (split_values)
-					SubmitValue();
+				{
+					value = StringUtilities::StripWhitespace(value);
+					if (value.size() > 0)
+					{
+						values_list.push_back(value);
+						value.clear();
+					}
+				}
 				else
 					value += character;
 			}
 			else if (character == '"')
 			{
-				state = VALUE_QUOTE;
-				if (split_by_whitespace)
-					SubmitValue();
+				if (split_values)
+				{
+					value = StringUtilities::StripWhitespace(value);
+					if (value.size() > 0)
+					{
+						values_list.push_back(value);
+						value.clear();
+					}
+					state = VALUE_QUOTE;
+				}
 				else
-					value += (split_by_comma ? '"' : ' ');
+				{
+					value += ' ';
+					state = VALUE_QUOTE;
+				}
 			}
 			else if (character == '(')
 			{
@@ -542,73 +524,97 @@ bool PropertySpecification::ParsePropertyValues(StringList& values_list, const S
 			}
 		}
 		break;
+
 		case VALUE_PARENTHESIS:
 		{
-			if (character == '(')
+			if (escape_character)
 			{
-				open_parentheses++;
-			}
-			else if (character == ')')
-			{
-				open_parentheses--;
-				if (open_parentheses == 0)
-					state = VALUE;
-			}
-			else if (character == '"')
-			{
-				state = VALUE_QUOTE;
-			}
-
-			value += character;
-		}
-		break;
-		case VALUE_QUOTE:
-		{
-			if (character == '"')
-			{
-				if (open_parentheses == 0)
+				if (character == ')' || character == '(' || character == '\\')
 				{
-					state = VALUE;
-					if (split_by_whitespace)
-						SubmitValue();
-					else
-						value += (split_by_comma ? '"' : ' ');
+					value += character;
 				}
 				else
 				{
-					state = VALUE_PARENTHESIS;
+					value += '\\';
 					value += character;
 				}
 			}
-			else if (character == '\\')
-			{
-				state = VALUE_QUOTE_ESCAPE_NEXT;
-			}
 			else
 			{
-				value += character;
+				if (character == '(')
+				{
+					open_parentheses++;
+					value += character;
+				}
+				else if (character == ')')
+				{
+					open_parentheses--;
+					value += character;
+					if (open_parentheses == 0)
+						state = VALUE;
+				}
+				else if (character == '\\')
+				{
+					escape_next = true;
+				}
+				else
+				{
+					value += character;
+				}
 			}
 		}
 		break;
-		case VALUE_QUOTE_ESCAPE_NEXT:
+
+		case VALUE_QUOTE:
 		{
-			if (character == '"' || character == '\\')
+			if (escape_character)
 			{
-				value += character;
+				if (character == '"' || character == '\\')
+				{
+					value += character;
+				}
+				else
+				{
+					value += '\\';
+					value += character;
+				}
 			}
 			else
 			{
-				value += '\\';
-				value += character;
+				if (character == '"')
+				{
+					if (split_values)
+					{
+						value = StringUtilities::StripWhitespace(value);
+						if (value.size() > 0)
+						{
+							values_list.push_back(value);
+							value.clear();
+						}
+					}
+					else
+						value += ' ';
+					state = VALUE;
+				}
+				else if (character == '\\')
+				{
+					escape_next = true;
+				}
+				else
+				{
+					value += character;
+				}
 			}
-			state = VALUE_QUOTE;
 		}
-		break;
 		}
 	}
 
 	if (state == VALUE)
-		SubmitValue();
+	{
+		value = StringUtilities::StripWhitespace(value);
+		if (value.size() > 0)
+			values_list.push_back(value);
+	}
 
 	return true;
 }

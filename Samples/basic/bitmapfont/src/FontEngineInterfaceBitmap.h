@@ -38,8 +38,7 @@ using Rml::FontFaceHandle;
 
 using Rml::byte;
 using Rml::Character;
-using Rml::ColourbPremultiplied;
-using Rml::Span;
+using Rml::Colourb;
 using Rml::String;
 using Rml::Texture;
 using Rml::Vector2f;
@@ -49,24 +48,19 @@ using Rml::Style::FontWeight;
 
 using Rml::FontEffectList;
 using Rml::FontMetrics;
-using Rml::RenderManager;
-using Rml::TextShapingContext;
-using Rml::TexturedMeshList;
+using Rml::GeometryList;
 
 class FontEngineInterfaceBitmap : public Rml::FontEngineInterface {
 public:
-	/// Called when RmlUi is being initialized.
-	void Initialize() override;
-
-	/// Called when RmlUi is being shut down.
-	void Shutdown() override;
+	FontEngineInterfaceBitmap();
+	virtual ~FontEngineInterfaceBitmap();
 
 	/// Called by RmlUi when it wants to load a font face from file.
 	bool LoadFontFace(const String& file_name, bool fallback_face, FontWeight weight) override;
 
 	/// Called by RmlUi when it wants to load a font face from memory, registered using the provided family, style, and weight.
 	/// @param[in] data A pointer to the data.
-	bool LoadFontFace(Span<const byte> data, const String& family, FontStyle style, FontWeight weight, bool fallback_face) override;
+	bool LoadFontFace(const byte* data, int data_size, const String& family, FontStyle style, FontWeight weight, bool fallback_face) override;
 
 	/// Called by RmlUi when a font configuration is resolved for an element. Should return a handle that
 	/// can later be used to resolve properties of the face, and generate string geometry to be rendered.
@@ -79,13 +73,11 @@ public:
 	const FontMetrics& GetFontMetrics(FontFaceHandle handle) override;
 
 	/// Called by RmlUi when it wants to retrieve the width of a string when rendered with this handle.
-	int GetStringWidth(FontFaceHandle handle, const String& string, const TextShapingContext& text_shaping_context,
-		Character prior_character = Character::Null) override;
+	int GetStringWidth(FontFaceHandle handle, const String& string, float letter_spacing, Character prior_character = Character::Null) override;
 
 	/// Called by RmlUi when it wants to retrieve the geometry required to render a single line of text.
-	int GenerateString(RenderManager& render_manager, FontFaceHandle face_handle, FontEffectsHandle font_effects_handle, const String& string,
-		const Vector2f& position, ColourbPremultiplied colour, float opacity, const TextShapingContext& text_shaping_context,
-		TexturedMeshList& mesh_list) override;
+	int GenerateString(FontFaceHandle face_handle, FontEffectsHandle font_effects_handle, const String& string, const Vector2f& position,
+		const Colourb& colour, float opacity, float letter_spacing, GeometryList& geometry) override;
 
 	/// Called by RmlUi to determine if the text geometry is required to be re-generated.eometry.
 	int GetVersion(FontFaceHandle handle) override;

@@ -196,20 +196,15 @@ Rml::String TestsShell::GetRenderStats()
 
 	result = Rml::CreateString(256,
 		"Context::Render() stats:\n"
-		"  Compile geometry: %zu\n"
-		"  Render geometry: %zu\n"
-		"  Release geometry: %zu\n"
+		"  Render calls: %zu\n"
+		"  Scissor enable: %zu\n"
+		"  Scissor set: %zu\n"
 		"  Texture load: %zu\n"
 		"  Texture generate: %zu\n"
 		"  Texture release: %zu\n"
-		"  Scissor enable: %zu\n"
-		"  Scissor set: %zu\n"
-		"  Clip mask enable: %zu\n"
-		"  Clip mask render: %zu\n"
 		"  Transform set: %zu",
-		counters.compile_geometry, counters.render_geometry, counters.release_geometry, counters.load_texture, counters.generate_texture,
-		counters.release_texture, counters.enable_scissor, counters.set_scissor, counters.enable_clip_mask, counters.render_to_clip_mask,
-		counters.set_transform);
+		counters.render_calls, counters.enable_scissor, counters.set_scissor, counters.load_texture, counters.generate_texture,
+		counters.release_texture, counters.set_transform);
 
 #endif
 

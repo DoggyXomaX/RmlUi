@@ -28,7 +28,8 @@
 
 #include "../../Include/RmlUi/Core/Profiling.h"
 
-#ifdef RMLUI_TRACY_MEMORY_PROFILING
+#ifdef RMLUI_ENABLE_PROFILING
+	#include <TracyClient.cpp>
 	#include <memory>
 
 void* operator new(std::size_t n)

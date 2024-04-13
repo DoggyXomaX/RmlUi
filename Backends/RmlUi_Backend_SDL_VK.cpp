@@ -32,7 +32,6 @@
 #include <RmlUi/Core/Context.h>
 #include <RmlUi/Core/Core.h>
 #include <RmlUi/Core/FileInterface.h>
-#include <RmlUi/Core/Log.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 
@@ -70,7 +69,7 @@ bool Backend::Initialize(const char* window_name, int width, int height, bool al
 	SDL_Window* window = SDL_CreateWindow(window_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, window_flags);
 	if (!window)
 	{
-		Rml::Log::Message(Rml::Log::LT_ERROR, "SDL error on create window: %s", SDL_GetError());
+		fprintf(stderr, "SDL error on create window: %s\n", SDL_GetError());
 		return false;
 	}
 
@@ -83,14 +82,14 @@ bool Backend::Initialize(const char* window_name, int width, int height, bool al
 		if (!SDL_Vulkan_GetInstanceExtensions(window, &count, nullptr))
 		{
 			data.reset();
-			Rml::Log::Message(Rml::Log::LT_ERROR, "Failed to get required vulkan extensions");
+			fprintf(stderr, "Could not get required vulkan extensions");
 			return false;
 		}
 		extensions.resize(count);
 		if (!SDL_Vulkan_GetInstanceExtensions(window, &count, extensions.data()))
 		{
 			data.reset();
-			Rml::Log::Message(Rml::Log::LT_ERROR, "Failed to get required vulkan extensions");
+			fprintf(stderr, "Could not get required vulkan extensions");
 			return false;
 		}
 	}
@@ -99,7 +98,7 @@ bool Backend::Initialize(const char* window_name, int width, int height, bool al
 			[](VkInstance instance, VkSurfaceKHR* out_surface) { return (bool)SDL_Vulkan_CreateSurface(data->window, instance, out_surface); }))
 	{
 		data.reset();
-		Rml::Log::Message(Rml::Log::LT_ERROR, "Failed to initialize Vulkan render interface");
+		fprintf(stderr, "Could not initialize Vulkan render interface.");
 		return false;
 	}
 

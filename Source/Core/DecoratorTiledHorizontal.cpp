@@ -29,7 +29,6 @@
 #include "DecoratorTiledHorizontal.h"
 #include "../../Include/RmlUi/Core/Element.h"
 #include "../../Include/RmlUi/Core/Geometry.h"
-#include "../../Include/RmlUi/Core/RenderManager.h"
 #include "../../Include/RmlUi/Core/Texture.h"
 
 namespace Rml {
@@ -76,54 +75,56 @@ bool DecoratorTiledHorizontal::Initialise(const Tile* _tiles, const Texture* _te
 	return true;
 }
 
-DecoratorDataHandle DecoratorTiledHorizontal::GenerateElementData(Element* element, BoxArea paint_area) const
+DecoratorDataHandle DecoratorTiledHorizontal::GenerateElementData(Element* element) const
 {
 	// Initialise the tiles for this element.
 	for (int i = 0; i < 3; i++)
-		tiles[i].CalculateDimensions(GetTexture(tiles[i].texture_index));
+		tiles[i].CalculateDimensions(*GetTexture(tiles[i].texture_index));
 
-	const Vector2f offset = element->GetBox().GetPosition(paint_area);
-	const Vector2f size = element->GetBox().GetSize(paint_area);
+	const int num_textures = GetNumTextures();
+	DecoratorTiledHorizontalData* data = new DecoratorTiledHorizontalData(num_textures);
+
+	Vector2f padded_size = element->GetBox().GetSize(BoxArea::Padding);
 
 	Vector2f left_dimensions = tiles[LEFT].GetNaturalDimensions(element);
 	Vector2f right_dimensions = tiles[RIGHT].GetNaturalDimensions(element);
 	Vector2f centre_dimensions = tiles[CENTRE].GetNaturalDimensions(element);
 
 	// Scale the tile sizes by the height scale.
-	ScaleTileDimensions(left_dimensions, size.y, Axis::Vertical);
-	ScaleTileDimensions(right_dimensions, size.y, Axis::Vertical);
-	ScaleTileDimensions(centre_dimensions, size.y, Axis::Vertical);
+	ScaleTileDimensions(left_dimensions, padded_size.y, Axis::Vertical);
+	ScaleTileDimensions(right_dimensions, padded_size.y, Axis::Vertical);
+	ScaleTileDimensions(centre_dimensions, padded_size.y, Axis::Vertical);
 
 	// Round the outer tile widths now so that we don't get gaps when rounding again in GenerateGeometry.
 	left_dimensions.x = Math::Round(left_dimensions.x);
 	right_dimensions.x = Math::Round(right_dimensions.x);
 
 	// Shrink the x-sizes on the left and right tiles if necessary.
-	if (size.x < left_dimensions.x + right_dimensions.x)
+	if (padded_size.x < left_dimensions.x + right_dimensions.x)
 	{
 		float minimum_width = left_dimensions.x + right_dimensions.x;
-		left_dimensions.x = size.x * (left_dimensions.x / minimum_width);
-		right_dimensions.x = size.x * (right_dimensions.x / minimum_width);
+		left_dimensions.x = padded_size.x * (left_dimensions.x / minimum_width);
+		right_dimensions.x = padded_size.x * (right_dimensions.x / minimum_width);
 	}
 
 	const ComputedValues& computed = element->GetComputedValues();
-	Mesh mesh[COUNT];
 
-	tiles[LEFT].GenerateGeometry(mesh[tiles[LEFT].texture_index], computed, offset, left_dimensions, left_dimensions);
+	// Generate the geometry for the left tile.
+	tiles[LEFT].GenerateGeometry(data->geometry[tiles[LEFT].texture_index].GetVertices(), data->geometry[tiles[LEFT].texture_index].GetIndices(),
+		computed, Vector2f(0, 0), left_dimensions, left_dimensions);
+	// Generate the geometry for the centre tiles.
+	tiles[CENTRE].GenerateGeometry(data->geometry[tiles[CENTRE].texture_index].GetVertices(),
+		data->geometry[tiles[CENTRE].texture_index].GetIndices(), computed, Vector2f(left_dimensions.x, 0),
+		Vector2f(padded_size.x - (left_dimensions.x + right_dimensions.x), centre_dimensions.y), centre_dimensions);
+	// Generate the geometry for the right tile.
+	tiles[RIGHT].GenerateGeometry(data->geometry[tiles[RIGHT].texture_index].GetVertices(), data->geometry[tiles[RIGHT].texture_index].GetIndices(),
+		computed, Vector2f(padded_size.x - right_dimensions.x, 0), right_dimensions, right_dimensions);
 
-	tiles[CENTRE].GenerateGeometry(mesh[tiles[CENTRE].texture_index], computed, offset + Vector2f(left_dimensions.x, 0),
-		Vector2f(size.x - (left_dimensions.x + right_dimensions.x), centre_dimensions.y), centre_dimensions);
-
-	tiles[RIGHT].GenerateGeometry(mesh[tiles[RIGHT].texture_index], computed, offset + Vector2f(size.x - right_dimensions.x, 0), right_dimensions,
-		right_dimensions);
-
-	const int num_textures = GetNumTextures();
-	DecoratorTiledHorizontalData* data = new DecoratorTiledHorizontalData(num_textures);
-	RenderManager* render_manager = element->GetRenderManager();
-
-	// Set the mesh and textures on the geometry.
-	for (int i = 0; i < num_textures; i++)
-		data->geometry[i] = render_manager->MakeGeometry(std::move(mesh[i]));
+	// Set the textures on the geometry.
+	const Texture* texture = nullptr;
+	int texture_index = 0;
+	while ((texture = GetTexture(texture_index)) != nullptr)
+		data->geometry[texture_index++].SetTexture(texture);
 
 	return reinterpret_cast<DecoratorDataHandle>(data);
 }
@@ -135,38 +136,11 @@ void DecoratorTiledHorizontal::ReleaseElementData(DecoratorDataHandle element_da
 
 void DecoratorTiledHorizontal::RenderElement(Element* element, DecoratorDataHandle element_data) const
 {
-	Vector2f translation = element->GetAbsoluteOffset(BoxArea::Border);
+	Vector2f translation = element->GetAbsoluteOffset(BoxArea::Padding).Round();
 	DecoratorTiledHorizontalData* data = reinterpret_cast<DecoratorTiledHorizontalData*>(element_data);
 
 	for (int i = 0; i < data->num_textures; i++)
-		data->geometry[i].Render(translation, GetTexture(i));
+		data->geometry[i].Render(translation);
 }
 
-DecoratorTiledHorizontalInstancer::DecoratorTiledHorizontalInstancer() : DecoratorTiledInstancer(3)
-{
-	RegisterTileProperty("left-image");
-	RegisterTileProperty("right-image");
-	RegisterTileProperty("center-image");
-	RegisterShorthand("decorator", "left-image, center-image, right-image", ShorthandType::RecursiveCommaSeparated);
-}
-
-DecoratorTiledHorizontalInstancer::~DecoratorTiledHorizontalInstancer() {}
-
-SharedPtr<Decorator> DecoratorTiledHorizontalInstancer::InstanceDecorator(const String& /*name*/, const PropertyDictionary& properties,
-	const DecoratorInstancerInterface& instancer_interface)
-{
-	constexpr size_t num_tiles = 3;
-
-	DecoratorTiled::Tile tiles[num_tiles];
-	Texture textures[num_tiles];
-
-	if (!GetTileProperties(tiles, textures, num_tiles, properties, instancer_interface))
-		return nullptr;
-
-	auto decorator = MakeShared<DecoratorTiledHorizontal>();
-	if (!decorator->Initialise(tiles, textures))
-		return nullptr;
-
-	return decorator;
-}
 } // namespace Rml

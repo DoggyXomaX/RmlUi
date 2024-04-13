@@ -83,7 +83,7 @@ void ElementFormControl::OnAttributeChange(const ElementAttributes& changed_attr
 			Blur();
 		}
 		else
-			RemoveProperty(PropertyId::Focus);
+			RemoveProperty("focus");
 	}
 }
 

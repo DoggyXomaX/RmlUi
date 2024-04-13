@@ -38,7 +38,6 @@
 #include "../../../Include/RmlUi/Core/Math.h"
 #include "../../../Include/RmlUi/Core/Profiling.h"
 #include "../../../Include/RmlUi/Core/Property.h"
-#include "../DataModel.h"
 
 namespace Rml {
 
@@ -130,17 +129,9 @@ void WidgetDropDown::OnUpdate()
 		const int selection = GetSelection();
 
 		if (Element* option = selection_element->GetChild(selection))
-		{
 			option->GetInnerRML(value_rml);
-			if (auto model = value_element->GetDataModel())
-				model->CopyAliases(option, value_element);
-		}
 		else
-		{
-			if (auto model = value_element->GetDataModel())
-				model->EraseAliases(value_element);
 			value_rml = parent_element->GetValue();
-		}
 
 		value_element->SetInnerRML(value_rml);
 
@@ -552,29 +543,13 @@ void WidgetDropDown::ProcessEvent(Event& event)
 	{
 		Input::KeyIdentifier key_identifier = (Input::KeyIdentifier)event.GetParameter<int>("key_identifier", 0);
 
-		auto HasVerticalNavigation = [this](PropertyId id) {
-			if (const Property* p = parent_element->GetProperty(id))
-			{
-				if (p->unit != Unit::KEYWORD)
-					return true;
-				const Style::Nav nav = static_cast<Style::Nav>(p->Get<int>());
-				if (nav == Style::Nav::Auto || nav == Style::Nav::Vertical)
-					return true;
-			}
-			return false;
-		};
-
 		switch (key_identifier)
 		{
 		case Input::KI_UP:
-			if (!box_visible && HasVerticalNavigation(PropertyId::NavUp))
-				break;
 			SeekSelection(false);
 			event.StopPropagation();
 			break;
 		case Input::KI_DOWN:
-			if (!box_visible && HasVerticalNavigation(PropertyId::NavDown))
-				break;
 			SeekSelection(true);
 			event.StopPropagation();
 			break;

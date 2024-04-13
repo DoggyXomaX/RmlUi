@@ -57,9 +57,6 @@ private:
 	GLFWcursor* cursor_pointer = nullptr;
 	GLFWcursor* cursor_cross = nullptr;
 	GLFWcursor* cursor_text = nullptr;
-	GLFWcursor* cursor_move = nullptr;
-	GLFWcursor* cursor_resize = nullptr;
-	GLFWcursor* cursor_unavailable = nullptr;
 };
 
 /**
@@ -73,7 +70,7 @@ namespace RmlGLFW {
 bool ProcessKeyCallback(Rml::Context* context, int key, int action, int mods);
 bool ProcessCharCallback(Rml::Context* context, unsigned int codepoint);
 bool ProcessCursorEnterCallback(Rml::Context* context, int entered);
-bool ProcessCursorPosCallback(Rml::Context* context, GLFWwindow* window, double xpos, double ypos, int mods);
+bool ProcessCursorPosCallback(Rml::Context* context, double xpos, double ypos, int mods);
 bool ProcessMouseButtonCallback(Rml::Context* context, int button, int action, int mods);
 bool ProcessScrollCallback(Rml::Context* context, double yoffset, int mods);
 void ProcessFramebufferSizeCallback(Rml::Context* context, int width, int height);

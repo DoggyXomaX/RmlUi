@@ -362,7 +362,7 @@ float BlockContainer::GetShrinkToFitWidth() const
 	if (computed.width().type == Style::Width::Length)
 	{
 		// We have a definite width, so use that size.
-		content_width = box.GetSize().x;
+		content_width = computed.width().value;
 	}
 	else
 	{
@@ -460,7 +460,7 @@ InlineContainer* BlockContainer::GetOpenInlineContainer()
 const InlineContainer* BlockContainer::GetOpenInlineContainer() const
 {
 	if (!child_boxes.empty() && child_boxes.back()->GetType() == Type::InlineContainer)
-		return rmlui_static_cast<InlineContainer*>(child_boxes.back().get());
+		return static_cast<InlineContainer*>(child_boxes.back().get());
 	return nullptr;
 }
 

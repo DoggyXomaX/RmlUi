@@ -98,7 +98,7 @@ public:
 	/// the order in which the values will be processed.
 	/// @param[in] type The type of shorthand to declare.
 	/// @param[in] id If 'Invalid' then automatically assigns a new id, otherwise assigns the given id.
-	/// @return An ID for the new shorthand, or 'Invalid' if the shorthand declaration is invalid.
+	/// @param True if all the property names exist, false otherwise.
 	ShorthandId RegisterShorthand(const String& shorthand_name, const String& property_names, ShorthandType type,
 		ShorthandId id = ShorthandId::Invalid);
 	/// Returns a shorthand definition.
@@ -136,11 +136,9 @@ private:
 	PropertyIdSet property_ids_inherited;
 	PropertyIdSet property_ids_forcing_layout;
 
-	enum class SplitOption { None, Whitespace, Comma };
-	bool ParsePropertyValues(StringList& values_list, const String& values, SplitOption split_option) const;
+	bool ParsePropertyValues(StringList& values_list, const String& values, bool split_values) const;
 
 	friend class Rml::StyleSheetSpecification;
-	friend class TestPropertySpecification;
 };
 
 } // namespace Rml

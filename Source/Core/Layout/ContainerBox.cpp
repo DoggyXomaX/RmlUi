@@ -31,7 +31,6 @@
 #include "../../../Include/RmlUi/Core/Element.h"
 #include "../../../Include/RmlUi/Core/ElementScroll.h"
 #include "../../../Include/RmlUi/Core/Profiling.h"
-#include "FlexFormattingContext.h"
 #include "FormattingContext.h"
 #include "LayoutDetails.h"
 #include <algorithm>
@@ -132,8 +131,8 @@ ContainerBox::ContainerBox(Type type, Element* element, ContainerBox* parent_con
 		const auto& computed = element->GetComputedValues();
 		overflow_x = computed.overflow_x();
 		overflow_y = computed.overflow_y();
-		is_absolute_positioning_containing_block = (computed.position() != Style::Position::Static || computed.has_local_transform() ||
-			computed.has_local_perspective() || computed.has_filter() || computed.has_backdrop_filter() || computed.has_mask_image());
+		position_property = computed.position();
+		has_local_transform_or_perspective = (computed.has_local_transform() || computed.has_local_perspective());
 	}
 }
 
@@ -268,16 +267,6 @@ bool FlexContainer::Close(const Vector2f content_overflow_size, const Box& box, 
 	return true;
 }
 
-float FlexContainer::GetShrinkToFitWidth() const
-{
-	// For the trivial case of a fixed width, we simply return that.
-	if (element->GetComputedValues().width().type == Style::Width::Type::Length)
-		return box.GetSize().x;
-
-	// Infer shrink-to-fit width from the intrinsic width of the element.
-	return FlexFormattingContext::GetMaxContentSize(element).x;
-}
-
 String FlexContainer::DebugDumpTree(int depth) const
 {
 	return String(depth * 2, ' ') + "FlexContainer" + " | " + LayoutDetails::GetDebugElementName(element);
@@ -300,16 +289,6 @@ void TableWrapper::Close(const Vector2f content_overflow_size, const Box& box, f
 
 	SubmitElementLayout();
 	SetElementBaseline(element_baseline);
-}
-
-float TableWrapper::GetShrinkToFitWidth() const
-{
-	// We don't currently support shrink-to-fit layout of tables. However, for the trivial case of a fixed width, we
-	// simply return that.
-	if (element->GetComputedValues().width().type == Style::Width::Type::Length)
-		return box.GetSize().x;
-
-	return 0.0f;
 }
 
 String TableWrapper::DebugDumpTree(int depth) const

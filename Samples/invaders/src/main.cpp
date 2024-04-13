@@ -26,8 +26,8 @@
  *
  */
 
-#include "DecoratorDefender.h"
-#include "DecoratorStarfield.h"
+#include "DecoratorInstancerDefender.h"
+#include "DecoratorInstancerStarfield.h"
 #include "ElementGame.h"
 #include "EventHandlerHighScore.h"
 #include "EventHandlerOptions.h"

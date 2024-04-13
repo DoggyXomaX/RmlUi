@@ -44,7 +44,7 @@
 		}
 	</style>
 </head>
-<body template="window" onload="add_score" onkeydown="onescape goto main_menu">
+<body template="window" onload="add_score">
 	<table data-model="high_scores">
 		<thead>
 			<tr>
@@ -63,7 +63,7 @@
 					{{score.name}}
 				</td>
 				<td>
-					<defender data-style-image-color="score.colour"/>
+					<defender data-style-color="score.colour"/>
 				</td>
 				<td>
 					{{score.wave}}

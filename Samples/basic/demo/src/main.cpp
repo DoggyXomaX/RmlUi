@@ -60,7 +60,7 @@ public:
 			document->GetElementById("title")->SetInnerRML(title);
 
 			// Add sandbox default text.
-			if (auto source = rmlui_dynamic_cast<Rml::ElementFormControl*>(document->GetElementById("sandbox_rml_source")))
+			if (auto source = static_cast<Rml::ElementFormControl*>(document->GetElementById("sandbox_rml_source")))
 			{
 				auto value = source->GetValue();
 				value += "<p>Write your RML here</p>\n\n<!-- <img src=\"assets/high_scores_alien_1.tga\"/> -->";
@@ -100,7 +100,7 @@ public:
 			}
 
 			// Add sandbox style sheet text.
-			if (auto source = rmlui_dynamic_cast<Rml::ElementFormControl*>(document->GetElementById("sandbox_rcss_source")))
+			if (auto source = static_cast<Rml::ElementFormControl*>(document->GetElementById("sandbox_rcss_source")))
 			{
 				Rml::String value = "/* Write your RCSS here */\n\n/* body { color: #fea; background: #224; }\nimg { image-color: red; } */";
 				source->SetValue(value);
@@ -166,8 +166,6 @@ public:
 				if (auto el_output = document->GetElementById("form_output"))
 					el_output->SetInnerRML(submit_message);
 			}
-
-			document->GetContext()->RequestNextUpdate(.0);
 		}
 	}
 
@@ -334,7 +332,7 @@ public:
 		}
 		else if (value == "tween_duration")
 		{
-			float value = (float)std::atof(rmlui_static_cast<Rml::ElementFormControl*>(element)->GetValue().c_str());
+			float value = (float)std::atof(static_cast<Rml::ElementFormControl*>(element)->GetValue().c_str());
 			tweening_parameters.duration = value;
 			if (auto el_duration = element->GetElementById("duration"))
 				el_duration->SetInnerRML(CreateString(20, "%2.2f", value));
@@ -383,7 +381,7 @@ public:
 		}
 		else if (value == "set_sandbox_body")
 		{
-			if (auto source = rmlui_dynamic_cast<Rml::ElementFormControl*>(element->GetElementById("sandbox_rml_source")))
+			if (auto source = static_cast<Rml::ElementFormControl*>(element->GetElementById("sandbox_rml_source")))
 			{
 				auto value = source->GetValue();
 				demo_window->SetSandboxBody(value);
@@ -391,7 +389,7 @@ public:
 		}
 		else if (value == "set_sandbox_style")
 		{
-			if (auto source = rmlui_dynamic_cast<Rml::ElementFormControl*>(element->GetElementById("sandbox_rcss_source")))
+			if (auto source = static_cast<Rml::ElementFormControl*>(element->GetElementById("sandbox_rcss_source")))
 			{
 				auto value = source->GetValue();
 				demo_window->SetSandboxStylesheet(value);
@@ -467,9 +465,9 @@ int main(int /*argc*/, char** /*argv*/)
 	bool running = true;
 	while (running)
 	{
-		demo_window->Update();
-
 		running = Backend::ProcessEvents(context, &Shell::ProcessKeyDownShortcuts, true);
+
+		demo_window->Update();
 		context->Update();
 
 		Backend::BeginFrame();

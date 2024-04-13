@@ -55,9 +55,8 @@ public:
 
 	ContainerBox* GetParent() { return parent_container; }
 	Element* GetElement() { return element; }
-
-	// Returns true if this box acts as a containing block for absolutely positioned descendants.
-	bool IsAbsolutePositioningContainingBlock() const { return is_absolute_positioning_containing_block; }
+	Style::Position GetPositionProperty() const { return position_property; }
+	bool HasLocalTransformOrPerspective() const { return has_local_transform_or_perspective; }
 
 protected:
 	ContainerBox(Type type, Element* element, ContainerBox* parent_container);
@@ -100,7 +99,8 @@ private:
 
 	Style::Overflow overflow_x = Style::Overflow::Visible;
 	Style::Overflow overflow_y = Style::Overflow::Visible;
-	bool is_absolute_positioning_containing_block = false;
+	Style::Position position_property = Style::Position::Static;
+	bool has_local_transform_or_perspective = false;
 
 	ContainerBox* parent_container = nullptr;
 };
@@ -131,8 +131,6 @@ public:
 	// @returns True if it succeeds, otherwise false if it needs to be formatted again because scrollbars were enabled.
 	bool Close(const Vector2f content_overflow_size, const Box& box, float element_baseline);
 
-	float GetShrinkToFitWidth() const override;
-
 	const Box* GetIfBox() const override { return &box; }
 	String DebugDumpTree(int depth) const override;
 
@@ -153,8 +151,6 @@ public:
 
 	// Submits the formatted box to the table element, and propagates any uncaught overflow to this box.
 	void Close(const Vector2f content_overflow_size, const Box& box, float element_baseline);
-
-	float GetShrinkToFitWidth() const override;
 
 	const Box* GetIfBox() const override { return &box; }
 	String DebugDumpTree(int depth) const override;
